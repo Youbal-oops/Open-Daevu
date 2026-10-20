@@ -4,7 +4,7 @@
 
 <h1 align="center">Daevu</h1>
 
-<p align="center"><b>One calm place for your research, your plans and the AI specialists who help with them.</b><br>
+<p align="center"><b>Your projects, notes, whiteboard and calendar in one app, with optional AI helpers and tools you can build yourself.</b><br>
 Local-first. Yours. Built for Windows.</p>
 
 <p align="center">
@@ -15,44 +15,56 @@ Local-first. Yours. Built for Windows.</p>
 
 ---
 
-## Think in one place
+## Everything for a project, side by side
 
-Notes, files, boards, a calendar and a team of agents usually live in five different apps. Daevu puts them side by side. Every project is a room: a page to write on, a canvas to think on, a chat with the specialists you picked, and a calendar that knows what everyone is doing.
+Notes, files, boards, a calendar and a team of agents usually live in five different apps. Daevu puts them next to each other. Each project is a room: a page to write on, a whiteboard to think on, a chat with the specialists you picked, and a calendar that knows what everyone is doing.
 
-Nothing is sent anywhere you did not choose. Your work sits in plain files on your computer, or in a Google Drive folder if you want it on two machines.
+Nothing leaves your computer unless you send it. Your work sits in plain files, or in a Google Drive folder if you want it on two machines.
 
-## A canvas that gets out of your way
+## Think on a whiteboard
 
 <p align="center"><img src="docs/assets/canvas.svg" alt="A flowchart building itself, a rough circle turning into a clean shape, sticky notes and a pasted link" width="760"></p>
 
-- Sticky notes, shapes, text, frames and connectors, with real formatting: size, bold, colour, borders, tilt, layers and lock.
-- Draw a rough circle or box and it snaps to a clean shape.
-- Press Tab to grow a mind map. Start from a template: brainstorm, retro, SWOT, flowchart, timeline.
-- Drop in documents, spreadsheets, kanban boards, images and links. They show their contents right on the board.
-- Smooth on big boards. Two-finger scroll pans, pinch and wheel zoom.
+- Sticky notes, shapes, text, frames and connectors, with size, bold, colour, borders, tilt, layers and lock.
+- Sketch a rough circle or box and it snaps to a clean shape.
+- Press Tab to grow a mind map, or start from a template: brainstorm, retro, SWOT, flowchart, timeline.
+- Drop in documents, spreadsheets, kanban boards, images and links. Each shows its contents right on the board.
+- Stays smooth on big boards. Two-finger scroll pans, pinch and wheel zoom.
+- Drag a connector off a shape, let go on empty space, and pick the next shape to attach.
 
-<p align="center"><img src="docs/assets/canvas.jpg" alt="The canvas with a flowchart and sticky notes" width="820"></p>
+<p align="center"><img src="docs/assets/canvas.jpg" alt="A flowchart and sticky notes on the board" width="820"></p>
 
-## A calendar you can actually live in
+## Build your own tools
+
+Describe what you need and Daevu builds it as a small app that lives inside the project: a budget tracker, a lead dashboard, a map with your own pins, a quiz, even a game.
+
+- **Ask in plain words.** "A loan calculator that reads my rate from the sheet." An agent writes the app, checks that it runs, and fixes its own errors.
+- **Or write it yourself.** An app is one HTML file with a tiny SDK for reading your project's tables, values and images, and for saving its own data between opens.
+- **Safe by default.** Apps run in a sandbox with no network access, so a tool you build can't send your data anywhere.
+- **Open it your way.** Full pane, a pull-out beside your work, or its own window, with its own icon in the launcher.
+
+Three.js and Phaser are bundled for 3D scenes and games, and a built-in database keeps an app's records tidy.
+
+## A calendar you can live in
 
 <p align="center"><img src="docs/assets/calendar.jpg" alt="The calendar, one long scroll with quick add" width="820"></p>
 
-One continuous scroll through the months. Type "Lunch with Sam tomorrow 1pm @Blue Bottle" and it becomes an event. Repeats, reminders, several calendars, week and day views, and `.ics` import and export. Your agents' scheduled work shows up here too.
+Scroll through the months without stopping. Type "Lunch with Sam tomorrow 1pm @Blue Bottle" and it becomes an event. It handles repeats, reminders, several calendars, week and day views, and `.ics` import and export. Scheduled agent work shows up here as well.
 
 ## Agents that have a job
 
 <p align="center"><img src="docs/assets/agents.jpg" alt="Agent profiles" width="820"></p>
 
-Give each specialist a name, a role and a model. Use your ChatGPT, Gemini or Claude account, an API key, or a command-line tool you already have. Specialists hand work to each other, write findings into your pages, leave comments, link related projects and add events to your calendar. You stay in charge: they only use the tools you give them.
+Give each specialist a name, a role and a model. Use your ChatGPT, Gemini or Claude account, an API key, or a command-line tool you already have. They hand work to each other, write findings into your pages, leave comments, link related projects and add events to your calendar. They only use the tools you give them. Prefer to work alone? Switch the helpers off in settings and every trace of them disappears.
 
 ## Make it yours
 
 <p align="center"><img src="docs/assets/plugins.jpg" alt="Plugins" width="820"></p>
 
-- **Plugins** add web chats, panels and tools. Pick an icon for each, place it in the sidebar, the tab bar or a pull-out, and lock it to a single project.
+- **Plugins** add web chats, panels and tools. Choose an icon, then place each in the sidebar, the tab bar or a pull-out, or lock it to one project.
 - **Connections** reach the public MCP registry, with the logo of every service.
-- A tab bar that keeps the tools you reach for per project: browser, calendar, database, canvas.
-- Pages with blocks, comments and deep links. Images open in the app with a marker, text and crop. Clean copy and paste that keeps your formatting.
+- **Your tab bar** keeps the tools you reach for in each project: browser, calendar, database, whiteboard.
+- **Pages** are made of blocks, with comments and deep links. Images open with a marker, text and crop. Copy and paste keeps your formatting.
 
 ## Quick start
 
@@ -63,7 +75,7 @@ npm ci
 npm run dev
 ```
 
-Open **Connections**, sign in to the AI service you use, create an agent, and start a project.
+The first launch walks you through a look, a storage place and whether to turn on AI helpers. Then start a project.
 
 ## Shortcuts
 
