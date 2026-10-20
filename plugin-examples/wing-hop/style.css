@@ -1,0 +1,4 @@
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#0d0a24;overflow:hidden}
+#app{height:100%;display:grid;place-items:center}
+#stage{display:block;width:min(100vw,calc(100vh * 16 / 9));aspect-ratio:16/9;outline:none;image-rendering:auto}

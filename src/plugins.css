@@ -44,6 +44,6 @@
 .plugin-icon-pick{position:relative}
 .plugin-icon-pick summary{display:inline-flex;align-items:center;gap:6px;cursor:pointer;list-style:none;font-size:12px;padding:6px 10px;border:1px solid var(--line,#8884);border-radius:8px}
 .plugin-icon-pick summary::-webkit-details-marker{display:none}
-.plugin-icon-grid{position:absolute;right:0;top:calc(100% + 6px);z-index:30;display:grid;grid-template-columns:repeat(8,32px);gap:4px;padding:8px;background:var(--panel,#fff);border:1px solid var(--line,#8884);border-radius:12px;box-shadow:0 12px 32px #0003}
+.plugin-icon-grid{position:absolute;left:0;top:calc(100% + 6px);z-index:60;display:grid;grid-template-columns:repeat(8,32px);gap:4px;padding:8px;background:var(--panel,#fff);border:1px solid var(--line,#8884);border-radius:12px;box-shadow:0 12px 32px #0003}
 .plugin-icon-grid button{width:32px;height:32px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer}
 .plugin-icon-grid button:hover,.plugin-icon-grid button.active{background:var(--accent-soft,#8882)}

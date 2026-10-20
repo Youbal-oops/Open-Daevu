@@ -38,6 +38,9 @@ Nothing leaves your computer unless you send it. Your work sits in plain files, 
 
 Describe what you need and Daevu builds it as a small app that lives inside the project: a budget tracker, a lead dashboard, a map with your own pins, a quiz, even a game.
 
+<p align="center"><img src="docs/assets/apps.gif" alt="Wing Hop, a platformer drawn entirely with Wingdings symbols, playing itself inside a Daevu project and then showing its code" width="820"></p>
+<p align="center"><sub><b>Wing Hop</b>: a small platformer whose every picture is a Wingdings character. It was made with the same app tools your agents use, and it runs right inside the project. <a href="docs/assets/apps.mp4">Watch the sharper video</a> or <a href="plugin-examples/wing-hop">read its source</a>.</sub></p>
+
 - **Ask in plain words.** "A loan calculator that reads my rate from the sheet." An agent writes the app, checks that it runs, and fixes its own errors.
 - **Or write it yourself.** An app is one HTML file with a tiny SDK for reading your project's tables, values and images, and for saving its own data between opens.
 - **Safe by default.** Apps run in a sandbox with no network access, so a tool you build can't send your data anywhere.
