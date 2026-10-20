@@ -1,0 +1,95 @@
+.app-shell.workbench-layout{padding:8px;gap:0}
+.workbench-layout>.sidebar{border-radius:9px 0 0 9px;border-right:0;box-shadow:none}
+.workbench-layout>.workspace-shell{position:relative;padding-left:42px;border:1px solid var(--glass-edge,var(--border));border-radius:0 9px 9px 0;gap:0;background:var(--work-plane,var(--panel))}
+.workbench-layout.sidebar-collapsed>.workspace-shell{border-radius:9px}
+.workbench-layout .topbar{height:40px;min-height:40px;border:0;border-bottom:1px solid var(--border);border-radius:0;box-shadow:none}
+.workbench-layout .work-surface{padding-left:0}
+.workbench-layout .shelf-notches{top:0;bottom:0;left:0;width:42px;max-height:none;gap:2px;padding:4px 0;align-items:stretch;border-right:1px solid var(--border);background:var(--chrome-plane,var(--panel));overflow-x:hidden}
+.workbench-layout .canvas-shelf-handle{position:relative;width:41px;height:42px;min-height:42px;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--muted)}
+.workbench-layout .canvas-shelf-handle:hover,.workbench-layout .canvas-shelf-handle:focus-visible{background:var(--hover);color:var(--text)}
+.workbench-layout .canvas-shelf-handle[data-open=true]{color:var(--text);background:var(--accent-wash)}
+.workbench-layout .canvas-shelf-handle[data-open=true]:before{content:'';position:absolute;inset:6px auto 6px 0;width:2px;background:var(--accent)}
+.workbench-layout .canvas-shelf{padding-left:0;border-radius:0;border:0;box-shadow:none}
+.workbench-layout .workspace-tabs{margin:0;border-radius:0;border:0;border-bottom:1px solid var(--border);min-height:36px;box-shadow:none;padding:0 10px}
+.workbench-layout .workspace-tabs [role=tab]{border-radius:0;min-height:35px;font-size:11px}
+.workbench-layout .workspace-tabs [role=tab].active{box-shadow:inset 0 2px var(--accent);background:var(--work-plane,var(--panel))}
+.workbench-layout .project-content{border-radius:0;border:0;box-shadow:none}
+.workbench-layout .project-heading{padding:14px 20px 12px}
+.workbench-layout .project-heading h1{font-size:23px}
+.workbench-layout .project-heading .eyebrow{display:none}
+.workbench-layout .project-heading p{margin-top:4px}
+.workbench-layout .workspace-shell[data-view=project]:has(.chat-panel){padding-right:var(--agent-panel-width)}
+.workbench-layout .chat-panel{top:8px;bottom:8px;right:8px;border-radius:0 9px 9px 0;border-right:0;border-top:0;border-bottom:0;box-shadow:none}
+.workbench-layout .apps-shelf>.app-home{flex:1;min-height:0;overflow:auto;padding:24px}
+@media(max-width:900px){.app-shell.workbench-layout{padding:4px}.workbench-layout .chat-panel{top:4px;right:4px;bottom:4px}}
+
+.workbench-layout .apps-only .full-page-heading{display:none}
+.workbench-layout .apps-only .launcher-search{max-width:520px;margin-bottom:18px}
+
+:root{--notch-peek:8px;--notch-w:58px}
+/* Notch: one shared board in the theme colour, flared into the left edge. It rests as a sliver and, on hover, grows
+   around only the icon under the pointer and glides to the next as you move (--by/--bh set in main.jsx). */
+.workbench-layout>.workspace-shell{padding-left:0}
+.workbench-layout .shelf-notches{--ease:cubic-bezier(.32,.72,0,1);--board:var(--chrome-plane,var(--panel));--by:0px;--bh:50px;top:50%;bottom:auto;left:0;width:var(--notch-peek);height:auto;max-height:calc(100% - 48px);translate:0 -50%;gap:0;padding:18px 0;align-items:flex-start;border:0;background:none;overflow:visible;z-index:40}
+.workbench-layout .shelf-notches .canvas-shelf-handle{--near:0;flex:none;width:var(--notch-w);height:50px;min-height:0;padding:0 0 0 8px;border:0;border-radius:0;color:var(--text);background:none;box-shadow:none;opacity:0;pointer-events:none;transition:opacity .3s ease .05s,background .2s ease;position:relative;z-index:1}
+.workbench-layout .shelf-notches.hot .canvas-shelf-handle{opacity:var(--near);transition:opacity .3s ease .08s}
+.workbench-layout .shelf-notches .canvas-shelf-handle:hover,.workbench-layout .shelf-notches .canvas-shelf-handle:focus-visible{background:radial-gradient(circle at 29px 25px,var(--hover) 21px,transparent 21.5px)}
+.workbench-layout .shelf-notches .canvas-shelf-handle[data-open=true]{background:radial-gradient(circle at 29px 25px,transparent 19px,var(--accent) 19.5px 21px,transparent 21.5px)}
+.workbench-layout .shelf-notches .canvas-shelf-handle[data-open=true]:before{display:none}
+@media(prefers-reduced-motion:reduce){.workbench-layout .shelf-notches .canvas-shelf-handle{transition:none}}
+/* Shelves drop down from the top edge with the same Apple ease, and resize smoothly except while the grip is being dragged. */
+.workbench-layout .canvas-shelf{transform-origin:50% 0;transition:height .5s cubic-bezier(.32,.72,0,1);animation:shelf-drop .5s cubic-bezier(.32,.72,0,1) both}
+.workbench-layout .canvas-shelf:has(.canvas-shelf-grip:active){transition:none}
+@keyframes shelf-drop{from{opacity:0;translate:0 -28px;clip-path:inset(0 0 100% 0 round 16px)}to{opacity:1;translate:0 0;clip-path:inset(0 0 0 0 round 16px)}}
+@media(prefers-reduced-motion:reduce){.workbench-layout .canvas-shelf{animation:none;transition:none}}
+
+.workbench-layout .notch-board,.workbench-layout .notch-flare{position:absolute;left:0;top:0;pointer-events:none;will-change:transform}
+.workbench-layout .notch-board{width:var(--notch-w);border-radius:0 24px 24px 0;background:var(--board);backdrop-filter:blur(18px) saturate(1.4);filter:drop-shadow(4px 6px 14px rgba(0,0,0,.22))}
+.workbench-layout .notch-flare{width:14px;background:radial-gradient(circle at 100% 0,transparent 13.5px,var(--board) 14px) top/100% 14px no-repeat,radial-gradient(circle at 100% 100%,transparent 13.5px,var(--board) 14px) bottom/100% 14px no-repeat,linear-gradient(var(--board),var(--board)) center/100% calc(100% - 28px) no-repeat}
+
+/* Our own title bar: the window has no native frame, only the system buttons drawn into the right end. */
+:root{--titlebar-h:40px;--titlebar-bg:#161717}
+:root[data-theme=light]{--titlebar-bg:#eceee9}
+#root{display:flex;flex-direction:column;height:100dvh;min-height:0}
+.app-shell.workbench-layout{flex:1;height:auto;min-height:0;padding:0 8px 8px}
+.titlebar{flex:none;height:var(--titlebar-h);display:flex;align-items:center;gap:8px;padding:0 calc(100vw - env(titlebar-area-x,0px) - env(titlebar-area-width,calc(100vw - 146px))) 0 10px;background:var(--titlebar-bg);-webkit-app-region:drag;user-select:none;position:relative;z-index:60}
+.titlebar button,.titlebar .nav-island,.titlebar .local-status{-webkit-app-region:no-drag}
+.titlebar-drag{flex:1;align-self:stretch;min-width:24px}
+.nav-island{display:flex;align-items:center;gap:2px;height:30px;padding:0 14px 0 4px;border-radius:12px;background:var(--chrome-plane,var(--panel));border:1px solid var(--border);box-shadow:0 3px 14px rgba(0,0,0,.22);min-width:0;max-width:min(620px,52vw)}
+.nav-step{width:26px;height:26px;display:grid;place-items:center;border-radius:8px;color:var(--muted)}
+.nav-step:hover:not(:disabled){background:var(--hover);color:var(--text)}
+.nav-step:disabled{opacity:.32;cursor:default}
+.nav-sep{width:1px;height:16px;margin:0 7px;background:var(--border)}
+.nav-location{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap;font-size:12.5px}
+.nav-location svg{color:var(--muted)}
+.nav-emoji{font-size:14px}
+.nav-location .crumb{color:var(--muted)}
+.nav-location .crumb:last-child{color:var(--text);font-weight:550;overflow:hidden;text-overflow:ellipsis}
+.titlebar .local-status{font-size:11px;color:var(--muted)}
+.tree-row{position:relative}
+.tree-row.drop-before::before,.tree-row.drop-after::after{content:'';position:absolute;left:8px;right:8px;height:2px;border-radius:2px;background:var(--accent);pointer-events:none}
+.tree-row.drop-before::before{top:-1px}
+.tree-row.drop-after::after{bottom:-1px}
+.tree-row.drop-inside{background:var(--accent-wash);outline:1px dashed var(--accent);outline-offset:-1px;border-radius:7px}
+.tree-row.archived{opacity:.62}
+.tree-root-drop{min-height:16px;border-radius:7px;margin:2px 8px}
+.tree-root-drop.over{background:var(--accent-wash);outline:1px dashed var(--accent);outline-offset:-1px}
+.tree-archive{margin-top:6px;border-top:1px solid var(--border-soft);padding-top:4px}
+.tree-archive-head{display:flex;align-items:center;gap:7px;width:100%;padding:7px 10px;color:var(--muted);font-size:11.5px;border-radius:7px}
+.tree-archive-head:hover{background:var(--hover);color:var(--text)}
+.tree-archive-head small{margin-left:auto;font-size:11px}
+.workbench-layout .chat-panel,.project-layout .chat-panel{top:var(--titlebar-h);height:auto}
+@media(max-width:900px){.workbench-layout .chat-panel{top:var(--titlebar-h)}}
+
+.nav-location button.crumb{padding:2px 6px;margin:0 -2px;border-radius:6px;font:inherit;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.nav-location button.crumb:hover{background:var(--hover);color:var(--text)}
+
+.tab-add-divider{width:1px;height:18px;margin:0 8px;background:var(--line,#8884);align-self:center;flex-shrink:0}
+.tab-add-wrap{position:relative;display:inline-flex;align-items:center;margin-right:auto;flex-shrink:0}
+.tab-add{width:24px;height:24px;display:grid;place-items:center;padding:0;border:1px solid var(--line,#8886);border-radius:8px;background:transparent;color:inherit;opacity:.75;cursor:pointer}
+.tab-add:hover,.tab-add[aria-expanded=true]{opacity:1;background:var(--hover,#8882)}
+.tab-add svg{width:13px;height:13px}
+.tab-add-scrim{position:fixed;inset:0;z-index:40}
+.tab-add-menu{position:absolute;left:0;top:calc(100% + 6px);z-index:41;min-width:190px;padding:6px;display:flex;flex-direction:column;background:var(--panel-solid,var(--panel,#fff));border:1px solid var(--line,#8884);border-radius:12px;box-shadow:0 12px 32px #0003}
+.tab-add-menu button{display:flex;align-items:center;gap:10px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:inherit;text-align:left;cursor:pointer;font:inherit}
+.tab-add-menu button:hover{background:var(--hover,#8882)}

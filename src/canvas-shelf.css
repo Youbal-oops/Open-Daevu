@@ -1,0 +1,29 @@
+.work-surface{position:relative;display:flex;flex:1;flex-direction:column;min-height:0;min-width:0;padding-left:28px}
+.canvas-shelf{position:absolute;inset:0 0 auto;z-index:2;display:flex;flex-direction:column;min-height:140px;max-height:100%;overflow:hidden;border:1px solid var(--glass-edge,var(--border));border-radius:16px;background:var(--work-plane,var(--panel));box-shadow:var(--shadow);padding-left:28px}
+.canvas-shelf>.canvas-view{flex:1;height:auto;min-height:0}
+.canvas-shelf .canvas-toolbar{flex-shrink:0;padding:8px 12px;gap:8px;flex-wrap:wrap}
+.canvas-shelf .canvas-hint{display:none}
+.canvas-shelf-controls{display:flex;align-items:center;gap:6px}
+.canvas-shelf-controls select{max-width:190px;font-size:11px;padding:4px 6px}
+.canvas-shelf-grip{display:flex;justify-content:center;align-items:center;flex-shrink:0;height:15px;cursor:ns-resize;touch-action:none;background:var(--panel);border-top:1px solid var(--border);user-select:none}
+.canvas-shelf-grip>span{width:56px;height:4px;border-radius:4px;background:var(--muted);opacity:.6}
+.shelf-notches{position:absolute;top:10px;left:0;z-index:5;display:flex;flex-direction:column;gap:3px;align-items:flex-start;max-height:calc(100% - 20px);overflow-y:auto;scrollbar-width:none}
+.canvas-shelf-handle{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;width:27px;height:34px;min-height:34px;padding:5px 3px;touch-action:none;cursor:ew-resize;border:1px solid var(--glass-edge,var(--border));border-left:0;border-radius:0 10px 10px 0;background:var(--panel);color:var(--muted);box-shadow:0 3px 8px #0000000d;user-select:none;line-height:1}
+.canvas-shelf-handle>svg{flex-shrink:0}
+.canvas-shelf-handle:hover,.canvas-shelf-handle:focus-visible{color:var(--text);background:var(--hover)}
+.canvas-shelf-handle[aria-disabled=true]{opacity:.5}
+.canvas-shelf-handle[data-open=true]{color:var(--accent);background:var(--accent-wash)}
+.browser-shelf>.browser-with-assistant{flex:1;min-height:0;height:auto}
+.browser-shelf .research-browser{min-height:0}
+.browser-shelf-heading,.plugin-shelf-heading{display:flex;align-items:center;gap:10px;min-height:48px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;font-size:12px}
+.browser-shelf-heading>.canvas-shelf-controls,.plugin-shelf-heading>.canvas-shelf-controls{margin-left:auto}
+.browser-shelf .canvas-shelf-controls select{max-width:130px}
+.plugin-shelf>.plugin-workspace{flex:1;min-height:0}
+.board-chat-host{flex:none!important;min-height:0!important}
+[data-theme=dark] .canvas-view.freeform .react-flow__edge-path,[data-theme=dark] .canvas-view.freeform .react-flow__connection-path{stroke:#fff}
+
+/* Stretching a shelf shows its shape only, so nothing reflows while the edge moves. */
+.canvas-shelf.stretching>*:not(.canvas-shelf-grip){content-visibility:hidden}
+.canvas-shelf.stretching::before{content:'';position:absolute;inset:0 0 15px;border-radius:inherit;background:linear-gradient(110deg,var(--hover) 30%,color-mix(in srgb,var(--hover) 55%,var(--panel)) 50%,var(--hover) 70%);background-size:220% 100%;animation:shelf-shimmer 1.4s linear infinite}
+@keyframes shelf-shimmer{to{background-position:-220% 0}}
+@media(prefers-reduced-motion:reduce){.canvas-shelf.stretching::before{animation:none}}

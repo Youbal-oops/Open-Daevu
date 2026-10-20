@@ -1,0 +1,18 @@
+node_modules/
+dist/
+release/
+release-v*/
+*.log
+.env*
+playwright-report/
+test-results/
+.test-data/
+
+# Account credentials and downloaded OAuth configuration
+auth/
+.auth/
+credentials.bin*
+client_secret*.json
+
+# Local assistant settings
+.claude/

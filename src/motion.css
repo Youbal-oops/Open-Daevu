@@ -1,0 +1,34 @@
+/* Motion and the project tab bar. Loaded after every other stylesheet. */
+:root{--ease-apple:cubic-bezier(.32,.72,0,1);--thumb-bg:rgba(255,255,255,.1);--thumb-edge:rgba(255,255,255,.09);--pill-bg:rgba(255,255,255,.045)}
+:root[data-theme=light]{--thumb-bg:#fff;--thumb-edge:rgba(40,60,40,.1);--pill-bg:rgba(40,60,40,.06)}
+
+/* A highlight that glides to whichever child is selected (positions come from motion.js). */
+[data-thumb]{position:relative}
+[data-thumb]::before{content:'';position:absolute;left:0;top:0;width:var(--thumb-w,0);height:var(--thumb-h,0);transform:translate(var(--thumb-x,0),var(--thumb-y,0));border-radius:var(--thumb-r,8px);background:var(--thumb-bg);box-shadow:var(--thumb-shadow,none);opacity:var(--thumb-o,0);pointer-events:none;z-index:0;transition:transform .46s var(--ease-apple),width .46s var(--ease-apple),height .46s var(--ease-apple),opacity .2s ease}
+[data-thumb]:not([data-thumb-ready])::before{transition:none}
+[data-thumb]>*,[data-thumb] .tree-row{position:relative;z-index:1}
+[data-thumb] [aria-selected=true],[data-thumb] .active,[data-thumb] .selected{background:transparent!important;box-shadow:none!important;border-color:transparent!important}
+.tab-strip[data-thumb]{--thumb-r:8px;--thumb-shadow:0 1px 2px rgba(0,0,0,.24),inset 0 0 0 1px var(--thumb-edge)}
+.segmented[data-thumb],.agent-panel-tabs[data-thumb],.page-home[data-thumb],.filter-pills[data-thumb],.theme-options[data-thumb]{--thumb-r:7px;--thumb-shadow:inset 0 0 0 1px var(--thumb-edge)}
+.workspace-nav[data-thumb],.project-tree[data-thumb]{--thumb-bg:var(--selected,rgba(255,255,255,.07));--thumb-r:8px}
+
+/* Every page eases in from the direction you are heading (--nav-x / --nav-y are set when you navigate). */
+@keyframes page-in{from{opacity:0;transform:translate(var(--nav-x,0px),var(--nav-y,8px))}to{opacity:1;transform:none}}
+.overview-page,.documents-page,.doc-page,.full-page,.app-studio,.blank-workspace,.editor-page{animation:page-in .44s var(--ease-apple) both}
+
+/* The project tab bar: a quiet pill with a raised, gliding selection. */
+.workbench-layout .workspace-tabs{height:48px;min-height:48px;padding:8px 14px;border:0;border-bottom:1px solid var(--border-soft);border-radius:0;background:transparent;box-shadow:none;gap:14px}
+.workbench-layout .workspace-tabs>.tab-strip{flex:0 1 auto;gap:2px;padding:3px;border-radius:11px;background:var(--pill-bg);align-items:center}
+.workbench-layout .workspace-tabs>.tab-strip>button[role=tab],.workbench-layout .workspace-tabs .doc-tab{height:30px;min-height:0;margin:0;padding:0 12px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:12.5px;font-weight:500;gap:7px;display:flex;align-items:center;white-space:nowrap;transition:color .22s ease}
+.workbench-layout .workspace-tabs .doc-tab{padding:0 4px 0 10px}
+.workbench-layout .workspace-tabs .doc-tab-main{height:30px;padding:0;font-size:12.5px;font-weight:500;color:inherit;max-width:170px}
+.workbench-layout .workspace-tabs>.tab-strip>button[role=tab]:hover,.workbench-layout .workspace-tabs .doc-tab:hover{color:var(--text);background:color-mix(in srgb,var(--text) 5%,transparent)}
+.workbench-layout .workspace-tabs [aria-selected=true]{color:var(--text)}
+.workbench-layout .workspace-tabs>.tab-strip>button[role=tab]>svg{width:15px;height:15px;opacity:.9}
+.workbench-layout .workspace-tabs .tab-count{padding:1px 6px;border:0;border-radius:999px;background:color-mix(in srgb,var(--text) 11%,transparent);color:var(--muted);font-size:10px;font-weight:600;line-height:1.5}
+.workbench-layout .workspace-tabs .home-star{width:9px;height:9px;margin:0 -2px;opacity:.75}
+.workbench-layout .workspace-tabs .tab-divider{align-self:center;width:1px;height:16px;margin:0 4px;background:var(--border)}
+.workbench-layout .workspace-tabs button:focus{outline:0}
+.workbench-layout .workspace-tabs button:focus-visible{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--accent) 60%,transparent)!important}
+
+@media(prefers-reduced-motion:reduce){[data-thumb]::before{transition:none}.overview-page,.documents-page,.doc-page,.full-page,.app-studio,.blank-workspace,.editor-page{animation:none}}

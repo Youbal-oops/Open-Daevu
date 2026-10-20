@@ -1,0 +1,1 @@
+{"apiVersion":1,"id":"project-dice","name":"Project dice","version":"1.0.0","description":"A small example panel with a project-specific D20 roll history.","author":"Research Workspace example","permissions":["storage"],"panels":[{"id":"dice","title":"Dice","type":"html","entry":"index.html"}]}

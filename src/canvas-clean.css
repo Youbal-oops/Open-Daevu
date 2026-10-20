@@ -1,0 +1,56 @@
+/* Canvas, made calm: soft floating surfaces, hairline borders, one accent, and nothing on screen that is not needed. */
+.canvas-view.freeform{--surface:color-mix(in srgb,var(--panel) 96%,transparent);--hairline:color-mix(in srgb,var(--border) 75%,transparent);--lift:0 10px 30px rgba(0,0,0,.12),0 1px 3px rgba(0,0,0,.08)}
+.canvas-view.freeform .canvas-palette,.canvas-view.freeform .canvas-context,.canvas-view.freeform .zoom-pill,.canvas-view.freeform .canvas-minimap,.canvas-view.freeform .format-panel,.canvas-view.freeform .popover{background:var(--surface)!important;border:1px solid var(--hairline)!important;box-shadow:var(--lift)!important;border-radius:16px!important}
+.canvas-view.freeform .canvas-minimap{border-radius:12px!important;overflow:hidden}
+
+/* Tools on the left */
+.canvas-view.freeform .canvas-palette{padding:6px;gap:2px}
+.canvas-view.freeform .canvas-palette>button,.canvas-view.freeform .canvas-palette .popover-anchor>button{width:36px;height:36px;border-radius:11px;color:var(--muted);transition:background .15s ease,color .15s ease}
+.canvas-view.freeform .canvas-palette button:hover{background:var(--hover);color:var(--text)}
+.canvas-view.freeform .canvas-palette button.active{background:var(--hover);color:var(--accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent)}
+.canvas-view.freeform .palette-sep{background:var(--hairline);margin:4px 8px}
+.canvas-view.freeform .popover.palette-menu{padding:6px;min-width:190px}
+.canvas-view.freeform .popover.palette-menu button{height:32px;padding:0 10px;border-radius:9px;font-size:13px;gap:10px}
+.canvas-view.freeform .popover.palette-menu button:hover{background:var(--hover)}
+.canvas-view.freeform .tool-group-label{padding:6px 10px 2px;font-size:11px;letter-spacing:.04em;color:var(--muted)}
+
+/* The bar that appears over a selection */
+.canvas-view.freeform .canvas-context{padding:5px 8px;gap:4px;border-radius:14px!important}
+.canvas-view.freeform .canvas-context button{width:auto;min-width:28px;height:28px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;font-size:12.5px;border-radius:9px;color:var(--muted)}
+.canvas-view.freeform .canvas-context button:hover{background:var(--hover);color:var(--text)}
+.canvas-view.freeform .canvas-context button.active{background:var(--hover);color:var(--accent)}
+.canvas-view.freeform .canvas-context .swatch{width:18px;min-width:18px;height:18px;padding:0;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.canvas-view.freeform .canvas-context .swatch.on{box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--accent)}
+.canvas-view.freeform .canvas-context .palette-sep.h{width:1px;height:16px;margin:0 4px;background:var(--hairline)}
+.canvas-view.freeform .format-panel{padding:14px;gap:10px;border-radius:16px!important;min-width:340px;top:calc(100% + 10px)}
+.canvas-view.freeform .format-panel .fp-row{gap:6px}
+.canvas-view.freeform .format-panel .fp-row>span{width:56px;font-size:12px}
+.canvas-view.freeform .format-panel .fp-row button{width:auto;flex:none;white-space:nowrap;padding:0 10px;height:28px;border-radius:9px;color:var(--text)}
+.canvas-view.freeform .format-panel .fp-row .fp-swatch{width:20px;min-width:20px;height:20px;padding:0;border-radius:50%}
+.canvas-view.freeform .format-panel .fp-row button[aria-pressed=true],.canvas-view.freeform .format-panel .fp-row button.on{background:var(--hover);color:var(--accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
+
+/* Zoom and overview */
+.canvas-view.freeform .zoom-pill{padding:4px 6px;gap:2px;border-radius:14px!important;margin:16px}
+.canvas-view.freeform .zoom-pill button{width:30px;height:30px;border-radius:9px;color:var(--muted)}
+.canvas-view.freeform .zoom-pill button:hover{background:var(--hover);color:var(--text)}
+.canvas-view.freeform .zoom-pill .zoom-value{min-width:54px;font-size:12.5px;font-weight:500;color:var(--text)}
+.canvas-view.freeform .zoom-sep{background:var(--hairline);height:16px;margin:0 4px}
+
+/* The blocks */
+.canvas-view.freeform .react-flow__node.selected{outline:none!important}
+.canvas-view.freeform .react-flow__resize-control.line{border-color:var(--accent)!important;border-width:1px!important}
+.canvas-view.freeform .react-flow__resize-control.handle{width:9px!important;height:9px!important;border-radius:3px!important;border:1.5px solid var(--accent)!important;background:#fff!important;box-shadow:none!important}
+.canvas-view.freeform .react-flow__resize-control.handle.top:not(.left):not(.right),.canvas-view.freeform .react-flow__resize-control.handle.bottom:not(.left):not(.right),.canvas-view.freeform .react-flow__resize-control.handle.left:not(.top):not(.bottom),.canvas-view.freeform .react-flow__resize-control.handle.right:not(.top):not(.bottom){display:none}
+.canvas-view.freeform .react-flow__node-file.selected .board-card,.canvas-view.freeform .react-flow__node-link.selected .link-card{box-shadow:0 0 0 1.5px var(--accent),0 6px 18px rgba(0,0,0,.12)}
+.canvas-view.freeform .shape.sticky{transform:none;box-shadow:0 1px 2px rgba(0,0,0,.12),0 6px 16px rgba(0,0,0,.10);border-radius:6px}
+.canvas-view.freeform .shape.sticky .shape-text{padding:14px 16px;font-size:15px;line-height:1.35}
+.canvas-view.freeform .shape.text:not(.sticky) .shape-text{padding:2px 4px}
+.canvas-view.freeform .board-card.embedded,.canvas-view.freeform .link-card,.canvas-view.freeform .board-card{border:1px solid var(--hairline);border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.08)}
+.canvas-view.freeform .board-card-header{font-size:10.5px;letter-spacing:.07em}
+
+/* Top bar and footer fade into the background */
+.canvas-view.freeform .canvas-hint{display:none}
+.canvas-view.freeform .canvas-bottom{opacity:.7;font-size:11.5px}
+.canvas-view.freeform .canvas-badge{font-weight:600}
+.canvas-view.freeform .react-flow__background-pattern{fill:color-mix(in srgb,var(--text) 22%,transparent)!important}
+.canvas-view.freeform .react-flow__connection-path,.canvas-view.freeform .react-flow__edge-path{stroke-linecap:round;stroke-linejoin:round}

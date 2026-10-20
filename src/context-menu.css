@@ -1,0 +1,12 @@
+.context-menu{position:fixed;z-index:3000;min-width:200px;padding:5px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--text);box-shadow:0 12px 32px rgba(0,0,0,.35);animation:context-pop .12s ease-out;transform-origin:top left}
+.context-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:7px 10px;border-radius:6px;font-size:13px;text-align:left;color:inherit}
+.context-menu button:hover,.context-menu button:focus-visible{background:var(--hover);outline:0}
+.context-menu button:disabled{opacity:.4}
+.context-menu button.danger{color:#e5484d}
+.context-menu button>span:not(.context-gap){flex:1}
+.context-gap{width:15px;flex-shrink:0}
+.context-menu kbd{font:inherit;font-size:11px;color:var(--muted)}
+.context-sep{height:1px;margin:4px 6px;background:var(--border)}
+@keyframes context-pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+.context-menu{background:#232525;backdrop-filter:none}
+:root[data-theme=light] .context-menu{background:#fff}

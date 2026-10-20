@@ -1,0 +1,68 @@
+/* Plugins page: quiet, spacious, one thing at a time. */
+.pm-page{max-width:880px;margin:0 auto;padding:44px 40px 80px;overflow:auto}
+.pm-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:36px}
+.pm-head h1{margin:0;font-size:30px;font-weight:650;letter-spacing:-.03em}
+.pm-head p{margin:6px 0 0;color:var(--muted);font-size:14px}
+.pm-head-actions{display:flex;align-items:center;gap:10px}
+.pm-search{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:10px;background:var(--hover);color:var(--muted)}
+.pm-search input{width:150px;border:0;outline:0;background:transparent;color:var(--text);font-size:13px;padding:0}
+.pm-add{position:relative}
+.pm-add-button{display:flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:10px;background:var(--text);color:var(--bg);font-size:13px;font-weight:550}
+.pm-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:30;min-width:180px;padding:6px;display:flex;flex-direction:column;border-radius:14px;background:var(--panel-solid,var(--bg));border:1px solid var(--border);box-shadow:0 18px 44px #0002}
+.pm-menu button{padding:9px 12px;border-radius:9px;text-align:left;font-size:13px}
+.pm-menu button:hover{background:var(--hover)}
+.pm-section{margin-bottom:38px}
+.pm-section>h2{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.01em}
+.pm-section>h2 span{font-weight:500;opacity:.7}
+.pm-discover{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.pm-card{display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;background:var(--card);border:1px solid var(--border)}
+.pm-card .plugin-logo{flex:none;width:40px;height:40px;border-radius:11px;margin:0}
+.pm-card>div{flex:1;min-width:0}
+.pm-card strong{display:block;font-size:14px;font-weight:600}
+.pm-card p{margin:2px 0 0;color:var(--muted);font-size:12.5px;line-height:1.4}
+.pm-pill{flex:none;height:28px;padding:0 14px;border-radius:999px;background:var(--hover);font-size:12.5px;font-weight:550;color:var(--accent)}
+.pm-pill:hover{background:var(--active,var(--hover));filter:brightness(.97)}
+.pm-list{border-radius:16px;background:var(--card);border:1px solid var(--border);overflow:hidden}
+.pm-row+.pm-row{border-top:1px solid var(--border)}
+.pm-row-main{display:flex;align-items:center;gap:12px;padding:12px 16px}
+.pm-row-title{flex:1;min-width:0;display:flex;align-items:center;gap:14px;text-align:left}
+.pm-tile{flex:none;width:36px;height:36px;display:grid;place-items:center;border-radius:10px;background:var(--hover);color:var(--accent)}
+.pm-row.off .pm-tile,.pm-row.off .pm-name{opacity:.5}
+.pm-name{display:flex;flex-direction:column;min-width:0}
+.pm-name strong{font-size:14px;font-weight:600}
+.pm-name small{color:var(--muted);font-size:12px;margin-top:1px}
+.pm-chevron{color:var(--muted);opacity:.6;transition:transform .2s ease}
+.pm-row.open .pm-chevron{transform:rotate(180deg)}
+.pm-switch{flex:none;position:relative;width:38px;height:22px;border-radius:999px;background:#8884;transition:background .2s ease}
+.pm-switch span{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .2s cubic-bezier(.3,.7,.3,1)}
+.pm-switch[aria-checked=true]{background:#34c759}
+.pm-switch[aria-checked=true] span{transform:translateX(16px)}
+.pm-detail{padding:2px 16px 16px 66px}
+.pm-detail[hidden]{display:none}
+.pm-detail>p{margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.5}
+.pm-fields{display:flex;flex-wrap:wrap;gap:12px 22px}
+.pm-field{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
+.pm-field select{height:32px;padding:0 10px;min-width:170px;border-radius:9px;font-size:13px}
+.pm-field .plugin-icon-pick summary{height:32px;padding:0 12px;border-radius:9px;font-size:13px;color:var(--text)}
+.pm-perms{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:14px;font-size:12px;color:var(--muted)}
+.pm-perms i{font-style:normal;padding:2px 9px;border-radius:999px;background:var(--hover);font-size:11.5px}
+.pm-detail-foot{display:flex;align-items:center;gap:14px;margin-top:16px}
+.pm-detail-foot>span{flex:1}
+.pm-link{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;color:var(--accent)}
+.pm-danger{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#d93a3a}
+.pm-empty{padding:28px;text-align:center;color:var(--muted);font-size:13px;margin:0}
+@media(max-width:900px){.pm-page{padding:28px 20px}.pm-head{flex-direction:column;align-items:stretch}.pm-discover{grid-template-columns:1fr}.pm-detail{padding-left:16px}}
+/* The small + beside the project tabs: its own bordered square, never stretched by the tab button rules. */
+.workspace-tabs .tab-add-wrap .tab-add{width:26px;min-width:0;height:26px;padding:0;flex:none;border-radius:8px;border:1px solid var(--border);background:transparent;box-shadow:none;opacity:.8}
+.workspace-tabs .tab-add-wrap .tab-add:hover,.workspace-tabs .tab-add-wrap .tab-add[aria-expanded=true]{background:var(--hover);opacity:1}
+.workspace-tabs .tab-add-menu button{width:100%;min-width:0;height:auto;justify-content:flex-start}
+.tab-add-sep{height:1px;margin:5px 8px;background:var(--border)}
+.workspace-tabs .tab-add-wrap .tab-add{display:flex;align-items:center;justify-content:center;line-height:0}
+.workspace-tabs .tab-add-wrap .tab-add svg{display:block;margin:0;position:static;flex:none}
+.tab-add-menu button{position:relative}
+.tab-add-pin{margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.workspace-tabs .doc-tab.pinned .doc-tab-close{opacity:0;width:0;padding:0;margin:0;overflow:hidden;transition:opacity .15s ease,width .15s ease}
+.workspace-tabs .doc-tab.pinned:hover .doc-tab-close,.workspace-tabs .doc-tab.pinned:focus-within .doc-tab-close{opacity:.7;width:20px}
+/* The cross on a tab: dead centre of its tab, whatever the other tab rules say. */
+.workspace-tabs .doc-tab .doc-tab-close{display:flex;align-items:center;justify-content:center;flex:none;width:20px;height:20px;min-width:0;padding:0;margin:0 4px 0 2px;align-self:center;line-height:0}
+.workspace-tabs .doc-tab .doc-tab-close svg{display:block;margin:0;position:static;transform:none}

@@ -1,0 +1,54 @@
+.connections-page.full-page{max-width:1240px;padding:28px 30px 24px;scrollbar-gutter:stable}
+.connections-page>.full-page-heading{align-items:flex-start;margin:8px 0 24px;gap:18px}
+.connections-page>.full-page-heading p{margin-top:7px}
+.connections-page .secure-label{display:flex;flex-shrink:0;margin-top:9px;font-size:10px}
+.connections-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));align-items:start;gap:18px}
+.connections-grid>.provider-connection{min-width:0;margin:0}
+.connections-page .provider-connection-heading{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;padding:20px;align-items:center}
+.connections-page .provider-connection-heading>div:nth-child(2){min-width:0}
+.connections-page .provider-connection-heading h2{font-size:17px;line-height:1.4}
+.connections-page .provider-connection-heading p{margin:5px 0 0;font-size:11px;line-height:1.6}
+.connections-page .provider-letter{width:36px;height:36px;border-radius:10px;font-size:19px}
+.connections-page .provider-connection-heading>.button{margin-left:0;padding:8px 11px;font-size:11px}
+.connections-page .button.primary{color:var(--accent-text);background:var(--accent);border-color:var(--accent)}
+.connections-page .storage-badge{padding:5px 8px;font-size:10px}
+.connection-empty{display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:22px 20px 25px;border-top:1px solid var(--border-soft)}
+.connection-empty>span{display:grid;place-items:center;width:42px;height:42px;background:var(--accent-wash);color:var(--accent);border-radius:12px;margin-bottom:3px}
+.connection-empty h3{font-size:15px;font-weight:550;letter-spacing:-.02em}
+.connection-empty p{font-size:12px;color:var(--muted);line-height:1.7;max-width:400px}
+.connections-page .connection-foot{padding:13px 20px;gap:8px 16px;flex-wrap:wrap;justify-content:flex-start}
+.connections-page .connection-foot>.text-button{white-space:normal;text-align:left;line-height:1.6;color:var(--muted)}
+.connections-page .storage-location{margin:0 20px 16px;padding:12px 14px;min-width:0}
+.connections-page .storage-location code{font-size:11px;line-height:1.65;word-break:break-word;overflow-wrap:anywhere;white-space:normal}
+.connections-page .storage-location small{font-size:11px;line-height:1.6}
+.connections-page .storage-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0 20px 20px}
+.connections-page .storage-actions>.button{white-space:normal;text-align:center;min-height:36px;font-size:11px}
+.connections-page .storage-actions>.text-button{font-size:11px;line-height:1.6}
+.connections-page .storage-help{padding:13px 20px;font-size:11px}
+.storage-help>summary{cursor:pointer;color:var(--muted);font-weight:500;line-height:1.7}
+.storage-help>p:first-of-type{margin-top:12px}
+.connections-page .storage-help p{font-size:11px;line-height:1.7}
+.connections-page .storage-shared-status,.connections-page .storage-restart{margin:0 20px 16px;padding:13px;font-size:11px}
+.connections-page .storage-device-options{margin:0;padding:14px 20px;border-top:1px solid var(--border-soft)}
+.connections-page .drive-connection>.connection-message,.connections-page .drive-connection>.inline-error{margin:0 20px 16px}
+.connections-page .account-row{padding:15px 20px;gap:10px;flex-wrap:wrap}
+.connections-page .account-identity{min-width:160px}
+.connections-page .account-actions{max-width:none;flex-wrap:wrap}
+.connections-page>.info-panel{margin-top:20px;padding:14px 16px;align-items:flex-start}
+.connections-page>.info-panel p{font-size:11px;line-height:1.7}
+@media(min-width:851px){
+ .connections-grid .storage-actions{display:grid;grid-template-columns:minmax(0,1fr)}
+ .connections-grid .storage-actions>.button{width:100%}
+ .connections-grid .storage-restart{flex-wrap:wrap}
+}
+@media(max-width:850px){
+ .connections-page>.full-page-heading{flex-wrap:wrap;gap:8px}
+ .connections-page .secure-label{margin-top:0}
+ .connections-grid .provider-connection-heading{grid-template-columns:36px minmax(0,1fr);padding:16px}
+ .connections-grid .provider-connection-heading>.button,.connections-grid .storage-badge{grid-column:2;justify-self:start}
+ .connections-page .storage-location{margin-inline:16px}
+ .connections-page .storage-actions{padding-inline:16px;display:grid;grid-template-columns:minmax(0,1fr)}
+ .connections-page .storage-actions>.button{width:100%}
+ .connections-page .account-actions{width:100%;padding-left:42px}
+}
+@media(max-width:1100px){.connections-page.full-page{padding:22px 20px}.connections-page>.full-page-heading{flex-wrap:wrap;gap:8px}.connections-page .secure-label{margin-top:0}}

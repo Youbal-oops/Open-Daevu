@@ -1,0 +1,41 @@
+/* Agents: rounded profile cards, with the tidy label-and-value layout of a CV inside. */
+.agents-page.ag-page{max-width:none;width:100%;align-self:stretch;padding:48px 40px 90px;overflow:auto}
+.ag-page>*{max-width:1080px;margin-left:auto;margin-right:auto}
+.ag-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-top:0;margin-bottom:30px}
+.ag-head h1{margin:0;font-size:30px;font-weight:650;letter-spacing:-.03em}
+.ag-head p{margin:6px 0 0;color:var(--muted);font-size:14px}
+.ag-add-button{display:flex;align-items:center;gap:6px;height:34px;padding:0 15px;border-radius:10px;background:var(--text);color:var(--bg);font-size:13px;font-weight:550}
+.ag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.agents-page .ag-card{display:flex;flex-direction:column;padding:22px 22px 16px;margin:0;border:1px solid var(--border);border-radius:18px;background:var(--card);box-shadow:none}
+.ag-card-head{display:flex;align-items:center;gap:14px}
+.ag-card-head .avatar{flex:none}
+.ag-title{flex:1;min-width:0}
+.ag-title h2{margin:0;font-size:19px;font-weight:650;letter-spacing:-.02em}
+.ag-title p{margin:2px 0 0;color:var(--accent);font-size:13px;line-height:1.35}
+.ag-facts{margin:18px 0 0;display:flex;flex-direction:column;flex:1}
+.ag-facts>div{display:grid;grid-template-columns:82px minmax(0,1fr);gap:12px;padding:9px 0;align-items:baseline;border-top:1px solid var(--border)}
+.ag-facts dt{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--faint,var(--muted))}
+.ag-facts dd{margin:0;font-size:13px;line-height:1.5;min-width:0}
+.ag-dim{color:var(--muted)}
+.ag-prompt{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;color:var(--muted)}
+.ag-card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:12px;border-top:1px solid var(--border)}
+.ag-link{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted)}
+.ag-link:hover{color:var(--text)}
+.ag-link.danger-text:hover{color:#d93a3a}
+.ag-new-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:0;padding:34px 0;border:1px dashed var(--border);border-radius:18px;color:var(--muted);font-size:13px}
+.ag-new-card span{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--hover)}
+.ag-new-card:hover{color:var(--text);background:var(--hover)}
+.ag-foot{margin-top:26px;color:var(--muted);font-size:12.5px}
+@media(max-width:760px){.agents-page.ag-page{padding:28px 20px}}
+
+/* Sidebar: the sections scroll in the middle, so your profile bar is always visible at the bottom. */
+.sidebar{display:flex;flex-direction:column;overflow:hidden}
+.sidebar-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;scrollbar-width:thin;margin-right:-6px;padding-right:6px}
+.sidebar-scroll .project-tree{overflow:visible;flex:none;min-height:auto}
+.sidebar-bottom{flex:none;margin-top:0}
+.sidebar-scroll{scrollbar-width:auto}
+.sidebar-scroll::-webkit-scrollbar{width:6px;height:0}
+.sidebar-scroll::-webkit-scrollbar-button{display:none;width:0;height:0}
+.sidebar-scroll::-webkit-scrollbar-track{background:transparent}
+.sidebar-scroll::-webkit-scrollbar-thumb{background:#8885;border-radius:6px}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover{background:#888a}

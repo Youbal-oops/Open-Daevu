@@ -1,0 +1,55 @@
+.editor-page.sheet-document{padding:0;min-height:0;overflow:hidden}
+.sheet-document .editor-toolbar{height:40px;min-height:40px;padding:0 14px}
+.sheet-document .editor-meta{display:flex;align-items:center;gap:10px;padding:8px 14px;min-height:48px;flex-shrink:0}
+.sheet-document .editor-meta .document-icon{width:28px;height:28px;border-radius:7px;flex-shrink:0}
+.sheet-document .editor-meta .document-icon svg{width:17px;height:17px}
+.sheet-document .document-title{font-size:18px;letter-spacing:-.3px;margin:0;line-height:1.4;flex:1;width:auto}
+.sheet-document .document-byline,.sheet-document .editor-bottom{display:none}
+.sheet-editor{flex:1;min-height:160px;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border);border-radius:8px;margin:0 10px 10px;background:var(--panel)}
+.sheet-editor .sheet-toolbar{padding:5px 8px;gap:8px;flex-wrap:wrap;flex-shrink:0;min-height:38px}
+.sheet-toolbar>div{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.sheet-toolbar .text-button{font-size:11px;padding:5px 6px}
+.sheet-toolbar .icon-button{width:27px;height:27px}
+.sheet-tool-divider{width:1px;height:18px;background:var(--border);margin:0 3px}
+.sheet-freeze{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);margin-right:7px}
+.sheet-formula-bar{display:flex;align-items:center;gap:10px;flex-shrink:0;padding:3px 8px;min-height:35px;font-size:12px;border-bottom:1px solid var(--border);min-width:0;background:var(--panel);margin:0;border-radius:0}
+.sheet-formula-bar form{width:94px;flex:none;border-right:1px solid var(--border);padding-right:7px}
+.sheet-formula-bar form input{width:100%;padding:5px 3px;color:var(--accent);font-size:11px;text-align:center}
+.sheet-formula-bar label{font-style:italic;color:var(--muted);font-family:Georgia,serif}
+.sheet-formula-bar input{flex:1;min-width:0;width:0;border:0;border-radius:3px;background:transparent;padding:5px;font-family:Consolas,monospace;font-size:12px}
+.sheet-formula-bar output{max-width:20%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:11px}
+.sheet-scroll{overflow:auto;flex:1;min-height:100px;position:relative;overscroll-behavior:contain;background:var(--work-plane,var(--bg))}
+.sheet-editor .sheet-table{border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:0;font-size:12px;user-select:none}
+.sheet-editor .sheet-table th,.sheet-editor .sheet-table td{height:30px;min-width:0;padding:0;border:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--work-plane,var(--input));font-weight:400}
+.sheet-editor .sheet-table th{color:var(--muted);background:var(--chrome-plane,var(--panel));font-size:10px;text-align:center;position:relative}
+.sheet-editor .sheet-table thead{position:sticky;top:0;z-index:4}
+.sheet-editor .sheet-table thead th{height:28px}
+.sheet-editor .sheet-table tr>th:first-child{position:sticky;left:0;z-index:2;width:44px}
+.sheet-editor .sheet-table thead th:first-child{z-index:5}
+.sheet-table th button{width:100%;height:100%;font-size:10px;padding:0}
+.sheet-table .frozen-row{position:sticky;top:28px;z-index:3}
+.sheet-editor .sheet-table .frozen-row td{background:var(--chrome-plane,var(--panel))}
+.sheet-editor .sheet-table .frozen-row input{font-weight:550}
+.sheet-editor .sheet-table input{display:block;width:100%;height:29px;min-width:0;font-size:12px;line-height:18px;padding:5px 9px;border:0;border-radius:0;background:transparent;color:var(--text);text-overflow:ellipsis;outline:none;box-shadow:none}
+.sheet-editor .sheet-table input[readonly]{cursor:cell;caret-color:transparent;user-select:none}
+.sheet-editor .sheet-table input.formula-cell{color:var(--accent)}
+.sheet-editor .sheet-table .selected-range{background:var(--accent-wash,var(--hover))}
+.sheet-editor .sheet-table .selected-heading{color:var(--accent);background:var(--accent-wash,var(--hover))}
+.sheet-editor .sheet-table .selected-cell{box-shadow:inset 0 0 0 2px var(--accent);position:relative}
+.sheet-editor .sheet-table .editing-cell{background:var(--input)}
+.sheet-editor .sheet-table .editing-cell input{cursor:text;user-select:text;caret-color:var(--text)}
+.sheet-column-resize{position:absolute;right:-3px;top:0;height:100%;width:7px;cursor:col-resize;touch-action:none;z-index:1}
+.sheet-column-resize:hover,.sheet-column-resize:focus-visible{background:var(--accent)}
+.sheet-editor .sheet-table .sheet-spacer td{padding:0;border:0;background:transparent}
+.sheet-status{min-height:30px;display:flex;align-items:center;gap:16px;justify-content:space-between;padding:5px 10px;border-top:1px solid var(--border);flex-shrink:0;font-size:10px;color:var(--muted);flex-wrap:wrap}
+.sheet-status>span:first-child{color:var(--accent)}
+.sheet-status span span{margin-left:10px}
+.sheet-status small{font-size:9px;color:var(--faint)}
+.sheet-error{padding:8px 12px;flex-shrink:0}
+.sheet-help{padding:10px 14px;font-size:11px;line-height:1.8;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0;color:var(--muted)}
+.sheet-help strong,.sheet-help code{margin-right:14px;color:var(--text)}
+.sheet-help span{display:block}
+.sheet-editor .csv-source{flex:1;min-height:160px;width:100%;font-family:Consolas,monospace;resize:none;border:0}
+.sheet-python{margin-top:20px;border-top:1px solid var(--border);padding:18px 0 10px}.sheet-python-heading{display:flex;gap:12px;align-items:center;font-size:13px}.sheet-python-heading span,.sheet-python p,.python-actions>span{font-size:11px;color:var(--muted);line-height:1.8}.sheet-python p{margin:10px 0}.python-command{display:flex;align-items:center;gap:12px;font-size:11px;color:var(--muted);margin:12px 0}.python-command input{flex:1;max-width:450px;padding:8px 10px;font-size:12px}.sheet-python>textarea{font-family:Consolas,monospace;font-size:12px;line-height:1.8;width:100%;min-height:180px;padding:14px;resize:vertical;border-radius:10px;tab-size:4}.python-actions{display:flex;align-items:center;gap:12px;margin-top:12px}.python-output{white-space:pre-wrap;word-break:break-word;font-family:Consolas,monospace;max-height:220px;overflow:auto;font-size:12px;padding:12px;border-radius:10px;background:var(--card);margin-top:10px}.python-results{margin-top:20px;font-size:12px}.python-preview-heading{display:flex;align-items:center;gap:12px;margin:14px 0}.python-preview-heading>span{flex:1;color:var(--muted)}.python-change-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}.python-change-table td,.python-change-table th{padding:8px;text-align:left;border-bottom:1px solid var(--border);word-break:break-word}.python-change-table td:first-child,.python-change-table th:first-child{width:60px}
+
+.sheet-editor .sheet-python{flex-shrink:0;max-height:48%;overflow:auto;margin:0;padding:12px 16px;min-height:0}
