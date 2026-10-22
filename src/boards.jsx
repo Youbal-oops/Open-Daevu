@@ -4,7 +4,8 @@ import { api } from './api';
 import { LiveApp, AppBridge } from './liveapp';
 import { STARTER_APP } from './app-templates';
 import { csvParse } from '../shared/domain.mjs';
-import { calculateSheet } from '../shared/sheet.mjs';
+import { calculateSheet, sheetContext } from '../shared/sheet.mjs';
+import { workbookOf } from '../shared/workbook.mjs';
 import { IconButton, Modal, Empty, uid, now, date } from './ui';
 import { AppStudio } from './app-studio';
 import {AppLogo} from './app-logo';
@@ -27,7 +28,7 @@ export function newArtifact(kind) {
 export function chartTable(artifact, project) {
   try {
     const sheet = artifact.data.sheetId ? project.notes.find(n => n.id === artifact.data.sheetId && n.kind === 'sheet') : null;
-    const rows = csvParse(sheet ? sheet.content : artifact.data.csv || ''), values = sheet ? calculateSheet(rows) : rows;
+    const rows = csvParse(sheet ? sheet.content : artifact.data.csv || ''), values = sheet ? calculateSheet(rows, sheetContext(workbookOf(sheet), csvParse, workbookOf(sheet)[0].name)) : rows;
     const header = (values[0] || []).map(String), body = values.slice(1).filter(r => r.some(c => String(c).trim() !== ''));
     const series = header.slice(1).map((name, i) => ({ name: name || `Series ${i + 1}`, values: body.map(r => { const n = parseFloat(String(r[i + 1] ?? '').replace(/,/g, '')); return Number.isFinite(n) ? n : 0; }) })).filter((s, i) => body.some(r => String(r[i + 1] ?? '').trim() !== ''));
     return { labels: body.map(r => String(r[0] ?? '')), series, sheet };

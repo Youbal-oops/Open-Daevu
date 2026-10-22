@@ -46,6 +46,8 @@ const preview = {
   async openFolder() { throw new Error('Local folders are available in the desktop app.'); },
   async openFile() { throw new Error('Open attached files in the desktop app.'); },
   async openURL(url) { if (/^https?:\/\//i.test(url)) window.open(url, '_blank', 'noopener,noreferrer'); },
+  async readFile() { throw new Error('Previews need the desktop app.'); },
+  async importSheets() { throw new Error('Importing spreadsheets needs the desktop app.'); },
   async importFiles() { throw new Error('Use the desktop app to import documents into your local workspace.'); },
   async fileData() { throw new Error('Map images need the desktop app.'); },
   async previewHtml() { throw new Error('Previews use the desktop app.'); },

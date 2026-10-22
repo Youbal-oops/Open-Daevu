@@ -7,6 +7,8 @@ const { pathToFileURL } = require('node:url');
 const { BoardsDatabase } = require('./boards-db.cjs');
 const { Store } = require('./store.cjs');
 const { Updates } = require('./updates.cjs');
+const sheetFiles = require('./sheet-files.cjs');
+const docConvert = require('./doc-convert.cjs');
 const { toIcs, parseIcs } = require('../shared/calendar.mjs');
 const { Reminders } = require('./reminders.cjs');
 const { DeviceLock } = require('./device-lock.cjs');
@@ -464,7 +466,7 @@ app.whenReady().then(async () => {
   handle('files:import', async projectId => {
     await storage.assertWritable();
     const dir = store.projectDir(projectId);
-    const selected = await dialog.showOpenDialog(window, { title: 'Add research files', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Research documents', extensions: ['pdf', 'docx', 'xlsx', 'csv', 'txt', 'md', 'json', 'png', 'jpg', 'jpeg'] }, { name: 'All files', extensions: ['*'] }] });
+    const selected = await dialog.showOpenDialog(window, { title: 'Add research files', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Research documents', extensions: ['pdf', 'epub', 'docx', 'doc', 'docm', 'xlsx', 'xls', 'xlsm', 'ods', 'csv', 'tsv', 'txt', 'md', 'json', 'png', 'jpg', 'jpeg'] }, { name: 'All files', extensions: ['*'] }] });
     if (selected.canceled) return;
     await storage.assertWritable();
     const files = [], notes = [];
@@ -474,10 +476,19 @@ app.whenReady().then(async () => {
     for (const source of selected.filePaths) {
       const stat = await fs.stat(source);
       if (stat.size > 100 * 1024 * 1024) throw new Error('Import files under 100 MB each.');
+      // Word files become documents; if one cannot be converted it is kept as an ordinary upload.
+      if (docConvert.WORD.test(source)) {
+        try {
+          const content = await docConvert.wordToMarkdown(source), at = existingNotes + notes.length, now = new Date().toISOString();
+          notes.push({ id: id(), title: path.basename(source).replace(/\.[^.]+$/, '').slice(0, 160), content, kind: 'note', author: 'You', createdAt: now, updatedAt: now, position: { x: 80 + at % 3 * 350, y: 90 + Math.floor(at / 3) * 280 } });
+          continue;
+        } catch {}
+      }
       const fileId = id(), name = path.basename(source), storedName = fileId + path.extname(name).toLowerCase();
       await fs.copyFile(source, path.join(dir, 'files', storedName));
       files.push({ id: fileId, name, storedName, size: stat.size, createdAt: new Date().toISOString(), position: { x: 80 + files.length % 3 * 350, y: fileRow + Math.floor(files.length / 3) * 280 } });
       if (/\.(csv|md|txt)$/i.test(name) && stat.size <= 1024 * 1024) notes.push({ id: id(), title: name.replace(/\.[^.]+$/, ''), kind: /\.csv$/i.test(name) ? 'sheet' : 'note', content: await fs.readFile(source, 'utf8'), author: 'You', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), position: { x: 80 + (existingNotes + notes.length) % 3 * 350, y: 90 + Math.floor((existingNotes + notes.length) / 3) * 280 } });
+      if (sheetFiles.EXCEL_ONLY.test(name) && stat.size <= 50 * 1024 * 1024) { try { notes.push(sheetFiles.importFile(source, { x: 80 + (existingNotes + notes.length) % 3 * 350, y: 90 + Math.floor((existingNotes + notes.length) / 3) * 280 })); } catch {} }
     }
     await store.update(s => { const p = s.projects.find(p => p.id === projectId); p.files.push(...files); p.notes.push(...notes); return s; });
   });
@@ -497,6 +508,14 @@ app.whenReady().then(async () => {
     if ((await fs.stat(full)).size > 12 * 1024 * 1024) throw new Error('Use an image under 12 MB.');
     return `data:${type};base64,${(await fs.readFile(full)).toString('base64')}`;
   });
+  // The raw bytes of an uploaded file, for the in-app viewers.
+  handle('files:read', async (projectId, fileId) => {
+    const file = store.state.projects.find(p => p.id === projectId)?.files.find(f => f.id === fileId);
+    if (!file) throw new Error('Unknown file.');
+    const full = path.join(store.projectDir(projectId), 'files', file.storedName);
+    if ((await fs.stat(full)).size > 150 * 1024 * 1024) throw new Error('This file is too large to preview.');
+    return fs.readFile(full);
+  });
   handle('artifact:preview', previewHtml);
   handle('artifact:ready',()=>{appAskReady=true;if(pendingAppAsk){send('artifact:ask',pendingAppAsk);pendingAppAsk=null;}});
   appWindows=new AppWindows({BrowserWindow,ipcMain,store,iconFor:artifact=>nativeAppIcon(artifact,nativeImage),database:boardsDb,apps:appProjects,url:trustedURL,preview:previewHtml,ask:async(projectId,text)=>{pendingAppAsk={projectId,text};if(!window || window.isDestroyed())await createWindow();window.show();window.focus();if(appAskReady && pendingAppAsk){send('artifact:ask',pendingAppAsk);pendingAppAsk=null;}}});
@@ -508,9 +527,26 @@ app.whenReady().then(async () => {
     const selected = await dialog.showSaveDialog(window, { defaultPath: `${artifact.title.replace(/[<>:"/\|?*]/g, '-')}.html`, filters: [{ name: 'Web page', extensions: ['html'] }] });
     if (!selected.canceled) await fs.writeFile(selected.filePath, artifact.data.html, 'utf8');
   });
+  // Spreadsheets from other programs: every sheet of an Excel, OpenDocument, CSV or TSV file becomes one Daevu spreadsheet.
+  handle('sheets:import', async projectId => {
+    await storage.assertWritable();
+    const selected = await dialog.showOpenDialog(window, { title: 'Import spreadsheets', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Spreadsheets', extensions: ['xlsx', 'xlsm', 'xlsb', 'xls', 'ods', 'fods', 'csv', 'tsv', 'numbers'] }, { name: 'All files', extensions: ['*'] }] });
+    if (selected.canceled) return 0;
+    const existing = store.state.projects.find(p => p.id === projectId)?.notes.length || 0, notes = [];
+    for (const file of selected.filePaths) notes.push(sheetFiles.importFile(file, { x: 80 + (existing + notes.length) % 3 * 350, y: 90 + Math.floor((existing + notes.length) / 3) * 280 }));
+    await store.update(s => { s.projects.find(p => p.id === projectId).notes.push(...notes); return s; });
+    return notes.length;
+  });
   handle('notes:export', async (projectId, noteId) => {
-    const note = store.state.projects.find(p => p.id === projectId)?.notes.find(n => n.id === noteId);
+    const project = store.state.projects.find(p => p.id === projectId), note = project?.notes.find(n => n.id === noteId);
     if (!note) throw new Error('Unknown document.');
+    if (note.kind === 'sheet') {
+      const base = note.title.replace(/[<>:"/\\|?*]/g, '-'), picked = await dialog.showSaveDialog(window, { defaultPath: `${base}.xlsx`, filters: [{ name: 'Excel workbook', extensions: ['xlsx'] }, { name: 'OpenDocument spreadsheet', extensions: ['ods'] }, { name: 'CSV (first sheet)', extensions: ['csv'] }] });
+      if (picked.canceled) return;
+      if (/\.csv$/i.test(picked.filePath)) await fs.writeFile(picked.filePath, note.content, 'utf8');
+      else { const { projectFiles } = await import('../shared/workbook.mjs'), { csvParse } = await import('../shared/domain.mjs'); sheetFiles.writeNote(note, picked.filePath, projectFiles(project.notes, csvParse, note.id)); }
+      return;
+    }
     const selected = await dialog.showSaveDialog(window, { defaultPath: `${note.title.replace(/[<>:"/\\|?*]/g, '-')}.${note.kind === 'sheet' ? 'csv' : 'md'}` });
     if (!selected.canceled) await fs.writeFile(selected.filePath, note.content, 'utf8');
   });

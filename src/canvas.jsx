@@ -7,7 +7,8 @@ import { FormatPanel, EdgePanel } from './canvas-format';
 import { recognizeShape } from '../shared/shape-recognize.mjs';
 import { TEMPLATES, buildTemplate } from '../shared/canvas-templates.mjs';
 import { csvParse, csvStringify } from '../shared/domain.mjs';
-import { calculateSheet, columnName } from '../shared/sheet.mjs';
+import { calculateSheet, columnName, sheetContext } from '../shared/sheet.mjs';
+import { workbookOf } from '../shared/workbook.mjs';
 import { uid, now, date, excerpt, Markdown } from './ui';
 import { ingestFiles, usePicture, IMAGE_TYPES } from './float-images';
 import { ArtifactPreview, KINDS, kindIcon, newArtifact } from './boards';
@@ -74,7 +75,7 @@ function Cell({ raw, shown, onCommit }) {
   return <input className="nodrag" aria-label="Cell" value={focus ? value : String(shown ?? '')} onFocus={() => setFocus(true)} onChange={e => setValue(e.target.value)} onBlur={() => { setFocus(false); if (value !== raw) onCommit(value); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}/>;
 }
 export function SheetEmbed({ note, h }) {
-  const parsed = useMemo(() => { try { const rows = csvParse(note.content); return { rows, values: calculateSheet(rows) }; } catch (e) { return { error: e.message }; } }, [note.content]);
+  const parsed = useMemo(() => { try { const rows = csvParse(note.content); return { rows, values: calculateSheet(rows, sheetContext(workbookOf(note), csvParse, workbookOf(note)[0].name)) }; } catch (e) { return { error: e.message }; } }, [note.content, note.sheets]);
   const [limit, setLimit] = useState({ rows: SHEET_STEP.rows, cols: 8 });
   if (parsed.error) return <p className="inline-error">{parsed.error}</p>;
   const { rows, values } = parsed;

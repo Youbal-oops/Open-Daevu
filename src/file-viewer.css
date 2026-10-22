@@ -1,0 +1,38 @@
+/* in-app viewers for PDF, EPUB, text and media */
+.file-viewer{display:flex;flex-direction:column;height:100%;min-height:0}
+.fv-head{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border-soft);flex:none}
+.fv-head>div{min-width:0;margin-right:auto}.fv-head strong{display:block;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fv-head small{color:var(--muted);font-size:11.5px}
+.fv-tile{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#4c88b8;color:#fff;flex:none}
+.pdf-viewer,.epub-viewer,.text-viewer,.media-viewer{flex:1;min-height:0;display:flex;flex-direction:column}
+.fv-tools{display:flex;align-items:center;gap:4px;padding:8px 14px;border-bottom:1px solid var(--border-soft);background:var(--panel);flex:none}
+.fv-tools .icon-button.on{background:var(--selected);color:var(--text)}
+.fv-sep{width:1px;height:18px;background:var(--border);margin:0 6px}
+.fv-tools form{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.fv-tools form input{width:40px;padding:4px 6px;border-radius:7px;border:1px solid var(--border);background:var(--input);color:var(--text);text-align:center;font-size:12px}
+.fv-zoom{min-width:52px;padding:4px 8px;border-radius:8px;font-size:12px;color:var(--text)}.fv-zoom:hover{background:var(--hover)}
+.fv-count{padding:0 6px;font-size:12px;color:var(--muted)}
+.fv-body{flex:1;min-height:0;display:flex}
+.pdf-thumbs{width:150px;flex:none;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:12px;border-right:1px solid var(--border-soft);background:var(--panel)}
+.pdf-thumb{display:grid;gap:5px;justify-items:center;padding:6px;border-radius:10px;color:var(--muted);font-size:11px}
+.pdf-thumb canvas{width:100%;height:auto;min-height:130px;background:#fff;border-radius:3px;box-shadow:0 2px 8px #0005}
+.pdf-thumb:hover{background:var(--hover)}.pdf-thumb.on{background:var(--selected);color:var(--text)}
+.pdf-scroll{flex:1;overflow:auto;padding:24px;display:flex;flex-direction:column;align-items:center;gap:16px;background:color-mix(in srgb,var(--text) 5%,var(--bg))}
+.pdf-page{position:relative;flex:none;background:#fff;box-shadow:0 6px 24px #0006;border-radius:2px}
+.pdf-page canvas{display:block}
+.pdf-page .textLayer{position:absolute;inset:0;overflow:clip;line-height:1;text-size-adjust:none;transform-origin:0 0}
+.pdf-page .textLayer ::selection{background:#4c88b866}
+.epub-contents{width:240px;flex:none;overflow-y:auto;padding:14px 10px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--border-soft);background:var(--panel)}
+.epub-contents strong{padding:6px 10px 10px;font-size:13px}
+.epub-contents button{padding:7px 10px;border-radius:8px;text-align:left;font-size:12.5px;color:var(--muted)}.epub-contents button:hover{background:var(--hover);color:var(--text)}.epub-contents button.on{background:var(--selected);color:var(--text)}
+.epub-scroll{flex:1;overflow-y:auto;display:flex;justify-content:center;padding:36px 24px 80px}
+.epub-page{max-width:680px;width:100%;line-height:1.75;color:var(--text)}
+.epub-page h1,.epub-page h2,.epub-page h3{line-height:1.25;margin:1.4em 0 .6em}.epub-page img{max-width:100%;height:auto;border-radius:6px}.epub-page p{margin:0 0 1em}.epub-page a{color:var(--accent)}
+.fv-scroll{flex:1;overflow:auto;padding:28px}
+.text-viewer pre{margin:0 auto;max-width:980px;padding:20px 24px;border-radius:12px;background:var(--card);border:1px solid var(--border-soft);font:12.5px/1.65 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word;color:var(--text)}
+.text-doc{max-width:760px;margin:0 auto;line-height:1.7}
+.media-viewer{align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,var(--text) 5%,var(--bg))}
+.media-viewer video{max-width:100%;max-height:100%;border-radius:12px;background:#000;box-shadow:0 10px 40px #0007}
+.audio-card{display:grid;gap:14px;justify-items:center;padding:36px 44px;border-radius:18px;background:var(--card);border:1px solid var(--border-soft);color:var(--muted)}.audio-card strong{color:var(--text);font-size:14px}
+.fv-message{flex:1;display:grid;place-content:center;justify-items:center;gap:10px;color:var(--faint)}.fv-message p{margin:0;font-size:13px;color:var(--muted)}
+.pdf-card-thumb{width:100%;height:100%;display:grid;place-items:center;position:absolute;inset:0}
+.pdf-card-thumb img{width:100%;height:100%;object-fit:cover;object-position:top}

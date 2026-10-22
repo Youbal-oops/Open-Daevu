@@ -1,6 +1,7 @@
 import {cliFailure} from './agent-status.mjs';
 import { PLUGIN_ICONS } from './workspace-plugins.mjs';
-import { calculateSheet, address } from './sheet.mjs';
+import { calculateSheet, address, sheetContext } from './sheet.mjs';
+import { cleanSheetFields, workbookOf, projectFiles } from './workbook.mjs';
 import {validateApp} from './app-project.mjs';
 import { cleanBlocks, cleanImages, blocksToMarkdown, markdownToBlocks } from './blocks.mjs';
 import { validateEvent, addDays as calendarAddDays, parseKey as calendarParseKey, dateKey as calendarDateKey } from './calendar.mjs';
@@ -242,7 +243,7 @@ function targetValue(project, target, depth) {
   if (target.type === 'kpi') { const k = (project.kpis || []).find(x => x.id === target.kpiId); if (!k) return missing('That KPI was deleted.'); const value = kpiValue(project, k, depth + 1); return /^#/.test(value) ? missing(value) : { ok: true, label: k.label, value }; }
   if (target.type === 'cell') {
     const note = project.notes.find(n => n.id === target.noteId && n.kind === 'sheet'); if (!note) return missing('That spreadsheet was deleted.');
-    let values; try { values = calculateSheet(csvParse(note.content)); } catch (e) { return missing(e.message); }
+    let values; try { const book = workbookOf(note); values = calculateSheet(csvParse(note.content), sheetContext(book, csvParse, book[0].name, projectFiles(project.notes, csvParse, note.id))); } catch (e) { return missing(e.message); }
     const [from, to = target.range] = target.range.split(':'); const [y0, x0] = address(from), [y1, x1] = address(to);
     const pick = (y, x) => values[y]?.[x] ?? '';
     if (!target.range.includes(':')) { const v = pick(y0, x0); return /^#[A-Z0-9/?!]+$/.test(String(v)) ? missing(String(v)) : { ok: true, label: note.title + '!' + target.range, value: v }; }
@@ -365,7 +366,9 @@ function cleanAnnotations(value) {
 function saveNoteRecord(prev, raw) {
   const incoming = { ...raw }; delete incoming.history; delete incoming.comments;
   if (incoming.format != null && !['markdown', 'blocks'].includes(incoming.format)) throw new Error('Invalid document format.');
-  if (incoming.kind === 'sheet') { delete incoming.blocks; delete incoming.format; delete incoming.images; }
+  const sheetFields = cleanSheetFields(incoming);
+  delete incoming.sheets; delete incoming.sheetName; delete incoming.filters;
+  if (incoming.kind === 'sheet') { delete incoming.blocks; delete incoming.format; delete incoming.images; Object.assign(incoming, sheetFields); }
   else if (incoming.format === 'blocks') { incoming.blocks = cleanBlocks(incoming.blocks); incoming.content = blocksToMarkdown(incoming.blocks); if (incoming.images !== undefined) { incoming.images = cleanImages(incoming.images); if (!incoming.images.length) delete incoming.images; } }
   else { delete incoming.blocks; delete incoming.format; delete incoming.images; }
   if (prev?.comments?.length) incoming.comments = prev.comments;

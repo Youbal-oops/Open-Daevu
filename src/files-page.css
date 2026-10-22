@@ -1,0 +1,36 @@
+/* files page */
+.files-page{padding:28px 34px 60px;max-width:1280px;margin:0 auto;width:100%}
+.files-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:20px}
+.files-head h2{margin:0;font-size:30px;font-weight:650;letter-spacing:-.03em}.files-head p{margin:6px 0 0;color:var(--muted);font-size:13px}
+.files-actions{display:flex;align-items:center;gap:10px}
+.files-search{display:flex;align-items:center;gap:8px;width:260px;padding:0 12px;height:36px;border-radius:11px;background:var(--hover);border:1px solid transparent;color:var(--muted);transition:border-color .15s,background .15s}
+.files-search:focus-within{border-color:var(--accent);background:var(--input)}
+.files-search input{flex:1;min-width:0;border:0;background:transparent;color:var(--text);font-size:13px;outline:0}
+.files-new{height:36px;padding:0 14px;border-radius:11px;gap:7px}
+.files-tabs{display:inline-flex;gap:2px;padding:3px;border-radius:12px;background:var(--hover);margin-bottom:22px}
+.files-tabs button{display:flex;align-items:center;gap:7px;padding:6px 14px;border-radius:9px;font-size:12.5px;color:var(--muted)}
+.files-tabs button small{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.files-tabs button.on{background:var(--card);color:var(--text);box-shadow:0 1px 4px #0004}
+.files-tabs button.on small{color:var(--muted)}
+.files-section{margin:30px 2px 14px;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.files-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.file-card{display:flex;flex-direction:column;text-align:left;border-radius:16px;background:var(--card);border:1px solid var(--border-soft);overflow:hidden;transition:transform .18s cubic-bezier(.32,.72,0,1),box-shadow .18s,border-color .18s;padding:0}
+.file-card:hover{transform:translateY(-2px);border-color:var(--border);box-shadow:0 14px 36px #0004}
+.file-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.file-preview{height:132px;padding:14px 16px;overflow:hidden;background:color-mix(in srgb,var(--text) 3%,transparent);border-bottom:1px solid var(--border-soft);position:relative}
+.file-preview p{margin:0;font-size:11.5px;line-height:1.6;color:var(--muted);display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
+.file-preview::after{content:'';position:absolute;inset:auto 0 0;height:28px;background:linear-gradient(transparent,var(--card));opacity:.7;pointer-events:none}
+.sheet-thumb{width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed;color:var(--muted)}
+.sheet-thumb td{padding:4px 6px;border:1px solid var(--border-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--card)}
+.sheet-thumb tr.head td{background:color-mix(in srgb,var(--text) 6%,var(--card));color:var(--text);font-weight:600}
+.file-meta{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.file-meta>div{min-width:0}.file-meta strong{display:block;font-size:13px;font-weight:560;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-meta small{display:block;margin-top:2px;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-tile{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;flex:none;color:#fff}
+.file-tile.green{background:#4f9a69}.file-tile.purple{background:#8b72c4}.file-tile.blue{background:#4c88b8}.file-tile.red{background:#c9605a}.file-tile.gray{background:#7d8581}
+.file-card.upload .file-preview{display:grid;place-items:center}
+.file-ext{padding:10px 16px;border-radius:12px;font-size:15px;font-weight:700;letter-spacing:.04em;color:#fff}
+.file-ext.green{background:#4f9a69}.file-ext.purple{background:#8b72c4}.file-ext.blue{background:#4c88b8}.file-ext.red{background:#c9605a}.file-ext.gray{background:#7d8581}
+.files-page .upload-zone{max-width:560px}
+.files-page .show-more{grid-column:1/-1}
+@media(max-width:760px){.files-head{flex-direction:column;align-items:stretch}.files-search{width:auto;flex:1}}

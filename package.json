@@ -21,6 +21,7 @@
   "dependencies": {
     "@automerge/automerge": "^3.5.0",
     "@chenglou/pretext": "^1.0.0",
+    "@e965/xlsx": "^0.20.3",
     "@fontsource-variable/inter": "^5.3.0",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@xyflow/react": "^12.9.0",
@@ -28,9 +29,12 @@
     "dompurify": "^3.4.17",
     "esbuild": "0.28.2",
     "jose": "^6.2.12",
+    "jszip": "^3.10.2",
     "lucide-react": "^0.468.0",
+    "mammoth": "^1.13.0",
     "motion": "^14.4.0",
     "parse5": "8.0.1",
+    "pdfjs-dist": "^6.4.299",
     "phaser": "4.2.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -38,7 +42,10 @@
     "remark-gfm": "^4.0.1",
     "simple-icons": "^16.35.0",
     "smol-toml": "^1.9.1",
-    "three": "0.186.1"
+    "three": "0.186.1",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2",
+    "word-extractor": "^1.0.4"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.4",
