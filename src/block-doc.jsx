@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { MessageSquare, Plus, GripVertical, Check, ImagePlus, Undo2, Redo2 } from 'lucide-react';
+import { MessageSquare, Plus, GripVertical, Check, ImagePlus, Undo2, Redo2, Copy, Trash2 } from 'lucide-react';
 import { uid } from './ui';
 import { listNumbers } from '../shared/blocks.mjs';
 import { useHistory, changedBlock } from './history';
@@ -14,7 +14,7 @@ const SHORTCUTS = [[/^# $/, 'h1'], [/^## $/, 'h2'], [/^### $/, 'h3'], [/^[-*] $/
 const LISTS = ['bullet', 'numbered', 'todo'];
 const FLOWS = new Set(['p', 'h1', 'h2', 'h3', 'bullet', 'numbered', 'todo']);
 const make = (type = 'p', text = '') => ({ id: uid(), type, text, ...(type === 'todo' ? { checked: false } : {}) });
-const matches = query => TYPES.filter(([, label, hint]) => !query || `${label} ${hint}`.toLowerCase().includes(query.toLowerCase()));
+const matches = (query, extra = []) => [...TYPES, ...extra].filter(([, label, hint]) => !query || `${label} ${hint}`.toLowerCase().includes(query.toLowerCase()));
 
 // ---- Text that shows its formatting. Stored text keeps light markers; the editor never shows them.
 function domToTree(node) {
@@ -98,7 +98,7 @@ const CodeText = memo(function CodeText({ block, focus, api }) {
 const BlockText = props => props.block.type === 'code' ? <CodeText {...props}/> : <RichText {...props}/>;
 
 const Row = memo(function Row({ b, num, focus, count, menu, pick, over, flow, api }) {
-  const entries = menu ? matches(menu.query) : [];
+  const entries = menu ? matches(menu.query, api.current.extra) : [];
   return <div className={`doc-block ${b.type}${over ? ' drop' : ''}`} data-block-id={b.id} onContextMenu={e => api.current.context(e, b)} data-flow={FLOWS.has(b.type) ? 'text' : 'solid'}
     onDragOver={e => { if (api.current.dragging()) { e.preventDefault(); api.current.over(b.id); } }} onDrop={e => { e.preventDefault(); api.current.drop(b.id); }}>
     <div className="doc-gutter">
@@ -119,11 +119,11 @@ const Row = memo(function Row({ b, num, focus, count, menu, pick, over, flow, ap
 });
 
 // A block editor for documents. The caller keeps the blocks; every change hands back the whole new list.
-export function BlockDoc({ blocks, onChange, commentCounts = {}, onComment, images = [], onImages, projectId, onNotice }) {
+export function BlockDoc({ charts, blocks, onChange, commentCounts = {}, onComment, images = [], onImages, projectId, onNotice }) {
   const [focus, setFocus] = useState(null), [menu, setMenu] = useState(null), [pick, setPick] = useState(0), [drag, setDrag] = useState(null);
   const api = useRef({}), latest = useRef(blocks); latest.current = blocks;
   const signature = useMemo(() => blocks.map(b => b.id + b.type + (b.text || '')).join('\u0001'), [blocks]);
-  const board = useFloatBoard({ projectId, images, onImages: onImages || (() => {}), signature, onError: onNotice }), picker = useImagePicker(board);
+  const board = useFloatBoard({ projectId, images, onImages: onImages || (() => {}), signature, onError: onNotice, charts }), picker = useImagePicker(board);
   const focusOn = (id, caret) => setFocus({ id, caret, nonce: Math.random() });
   const commit = fn => onChange(fn(latest.current));
   const patch = (id, values) => commit(list => list.map(b => b.id === id ? { ...b, ...values } : b));
@@ -135,12 +135,14 @@ export function BlockDoc({ blocks, onChange, commentCounts = {}, onComment, imag
   const ctx = useContextMenu(), [emojiAt, setEmojiAt] = useState(null);
 
   api.current = {
+    extra: charts?.entries || [], charts,
     patch,
     // Right-click on a line of text: emoji where the caret was, change the block's kind, duplicate or delete it.
     context(e, b) {
-      if (['divider', 'table', 'code'].includes(b.type)) return;
+      if (b.type === 'table') return;
+      if (['divider', 'code'].includes(b.type)) { ctx.open(e, [{ label: 'Duplicate', icon: Copy, onClick: () => insertAfter(b.id, [{ ...b, id: uid() }]) }, { label: 'Delete', icon: Trash2, danger: true, onClick: () => api.current.removeBlock(b.id) }]); return; }
       const el = e.target.closest('.doc-text'), sel = window.getSelection(), range = el && sel.rangeCount && el.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
-      ctx.open(e, blockMenuItems({ block: b, x: e.clientX, y: e.clientY, onEmoji: (x, y) => setEmojiAt({ x, y, id: b.id, range }), onTurn: type => api.current.convert(b.id, type), onDuplicate: () => insertAfter(b.id, [{ ...b, id: uid() }]), onDelete: () => api.current.removeBlock(b.id) }));
+      ctx.open(e, blockMenuItems({ block: b, x: e.clientX, y: e.clientY, onEmoji: (x, y) => setEmojiAt({ x, y, id: b.id, range }), onBoard: charts ? () => charts.create().then(chartId => chartId && board.addChart(chartId, b.id)) : undefined, onTurn: type => api.current.convert(b.id, type), onDuplicate: () => insertAfter(b.id, [{ ...b, id: uid() }]), onDelete: () => api.current.removeBlock(b.id) }));
     },
     insertEmoji({ id, range }, emoji) {
       const el = document.querySelector(`[data-block-id="${id}"] .doc-text`), sel = window.getSelection();
@@ -158,6 +160,7 @@ export function BlockDoc({ blocks, onChange, commentCounts = {}, onComment, imag
     },
     choose(type, id) {
       setMenu(null);
+      if (type.startsWith('chart:')) { patch(id, { type: 'p', text: '' }); focusOn(id, 'start'); Promise.resolve(charts.create(type)).then(chartId => chartId && board.addChart(chartId, id)).catch(e => onNotice?.(e.message)); return; }
       if (type === 'image') { patch(id, { text: '' }); focusOn(id, 'start'); picker.open(); return; }
       if (type === 'divider') { const next = make('p'); commit(list => { const at = list.findIndex(b => b.id === id), copy = [...list]; copy[at] = { id, type: 'divider', text: '' }; copy.splice(at + 1, 0, next); return copy; }); focusOn(next.id, 'start'); return; }
       if (type === 'table') { const next = make('p'); commit(list => { const at = list.findIndex(b => b.id === id), copy = [...list]; copy[at] = { id, type: 'table', text: TABLE_TEMPLATE }; copy.splice(at + 1, 0, next); return copy; }); focusOn(next.id, 'start'); return; }
@@ -167,7 +170,7 @@ export function BlockDoc({ blocks, onChange, commentCounts = {}, onComment, imag
       const list = latest.current, i = list.findIndex(x => x.id === b.id), el = e.target, rich = el.tagName !== 'TEXTAREA';
       const here = rich ? offsets(el) || { start: 0, end: 0 } : { start: el.selectionStart, end: el.selectionEnd };
       if (menu?.id === b.id) {
-        const entries = matches(menu.query);
+        const entries = matches(menu.query, charts?.entries);
         if (e.key === 'ArrowDown') { e.preventDefault(); setPick(p => (p + 1) % Math.max(1, entries.length)); return; }
         if (e.key === 'ArrowUp') { e.preventDefault(); setPick(p => (p + entries.length - 1) % Math.max(1, entries.length)); return; }
         if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); if (entries[pick]) api.current.choose(entries[pick][0], b.id); return; }
@@ -218,7 +221,7 @@ export function BlockDoc({ blocks, onChange, commentCounts = {}, onComment, imag
   const numbers = useMemo(() => listNumbers(blocks), [blocks]);
   return <div {...board.rootProps} onKeyDown={history.onKeyDown} className="doc-blocks flow-root" role="document" aria-label="Document blocks">
     <div className="doc-undo"><button type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={history.undo}><Undo2 size={15}/></button><button type="button" aria-label="Redo" title="Redo (Ctrl+Y)" disabled={!history.canRedo} onClick={history.redo}><Redo2 size={15}/></button></div>
-    {ctx.element}{emojiAt && <EmojiPopup x={emojiAt.x} y={emojiAt.y} onClose={() => setEmojiAt(null)} onPick={i => api.current.insertEmoji(emojiAt, i)}/>}
+    {ctx.element}{charts?.picker}{emojiAt && <EmojiPopup x={emojiAt.x} y={emojiAt.y} onClose={() => setEmojiAt(null)} onPick={i => api.current.insertEmoji(emojiAt, i)}/>}
     {picker.element}
     {onImages && <ImageLayer board={board}/>}
     {blocks.map((b, at) => {

@@ -1,3 +1,7 @@
+import { compileExpr } from './mathexpr.mjs';
+// Formulas that plugins add. Built-in names always win.
+const CUSTOM = new Map();
+export function setSheetFunctions(list) { CUSTOM.clear(); for (const f of list || []) { try { CUSTOM.set(f.name, { args: f.args, run: compileExpr(f.expr) }); } catch {} } }
 export function columnName(index) { let s = ''; for (let n = index + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s; return s; }
 const columnIndex = letters => [...letters.toUpperCase()].reduce((v, c) => v * 26 + c.charCodeAt(0) - 64, 0) - 1;
 export function address(ref) { const m = /^\$?([A-Z]+)\$?([1-9]\d*)$/i.exec(ref); if (!m) throw Error('#REF!'); return [Number(m[2]) - 1, columnIndex(m[1])]; }
@@ -282,7 +286,11 @@ export function calculateSheet(rows, context = {}) {
       case 'PV': { need(v, 3, 5); const r = num(v[0]), n = num(v[1]), p = num(v[2]), fv = num(v[3] ?? 0), t = num(v[4] ?? 0); return r === 0 ? -(fv + p * n) : -(fv + p * (1 + r * t) * ((1 + r) ** n - 1) / r) / (1 + r) ** n; }
       case 'NPV': { if (v.length < 2) throw Error('#VALUE!'); const r = num(v[0]); return numbers(v.slice(1)).reduce((a, c, k) => a + c / (1 + r) ** (k + 1), 0); }
       case 'IRR': { const cf = numbers([v[0]]); if (cf.length < 2 || !cf.some(x => x > 0) || !cf.some(x => x < 0)) throw Error('#NUM!'); let r = v[1] === undefined ? 0.1 : num(v[1]); for (let k = 0; k < 100; k++) { let f = 0, d = 0; cf.forEach((c, t) => { f += c / (1 + r) ** t; d -= t * c / (1 + r) ** (t + 1); }); if (Math.abs(f) < 1e-9) return r; if (d === 0) break; r -= f / d; } throw Error('#NUM!'); }
-      default: throw Error('#NAME?');
+      default: {
+        const custom = CUSTOM.get(name); if (!custom) throw Error('#NAME?');
+        need(v, custom.args.length); const out = custom.run(Object.fromEntries(custom.args.map((a, k) => [a, num(v[k])])));
+        if (!Number.isFinite(out)) throw Error('#VALUE!'); return Number(out.toPrecision(12));
+      }
     }
   }
   return rows.map((row, y) => row.map((_, x) => { try { return cell(SEP, y, x); } catch (e) { return /^#[A-Z0-9/?!]+$/.test(e.message) ? e.message : '#ERROR!'; } }));

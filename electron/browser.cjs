@@ -7,6 +7,35 @@ class ResearchBrowser {
     this.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
     this.session.setPermissionCheckHandler(() => false);
     this.window.webContents.on('did-start-loading', () => this.hide());
+    // Plugins can hide parts of pages: requests that match one of their block patterns never leave.
+    this.session.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => { try { callback({ cancel: this.changes.blocked(details.url) }); } catch { callback({}); } });
+    this.changes = { blocked: () => false, forUrl: () => ({ css: [], scripts: [] }), tool: () => null };
+  }
+  // The main process hands over a function that lists the enabled plugins.
+  usePlugins(list) {
+    const shared = import('../shared/browser-plugins.mjs');
+    this.changes = {
+      blocked: url => { try { return this.matcher?.blockedBy(list(), url) || false; } catch { return false; } },
+      forUrl: url => { try { return this.matcher?.browserChanges(list(), url) || { css: [], scripts: [] }; } catch { return { css: [], scripts: [] }; } },
+      tool: (pluginId, toolId) => list().find(p => p.enabled && p.id === pluginId)?.contributes?.browser?.tools?.find(t => t.id === toolId) || null
+    };
+    shared.then(m => { this.matcher = m; });
+  }
+  async apply(wc) {
+    const url = wc.getURL(); if (!/^https?:/.test(url)) return;
+    const { css, scripts } = this.changes.forUrl(url);
+    for (const sheet of css) await wc.insertCSS(sheet).catch(() => {});
+    for (const code of scripts) await wc.executeJavaScript(code, true).catch(() => {});
+  }
+  // A toolbar button from a plugin: run its script on the page and hand back what it returns.
+  async runTool(projectId, tabId, pluginId, toolId) {
+    const tool = this.changes.tool(pluginId, toolId); if (!tool) throw new Error('That tool is not available.');
+    const entry = this.ensure(projectId, tabId), wc = entry.view.webContents, url = wc.getURL();
+    if (!/^https?:/.test(url)) throw new Error('Open a website first.');
+    const { anyMatch } = await import('../shared/browser-plugins.mjs');
+    if (!anyMatch(tool.matches, url)) throw new Error('This tool is not made for this website.');
+    const value = await wc.executeJavaScript(tool.code, true);
+    return value == null ? '' : String(value).slice(0, 2000);
   }
   project(projectId) { const p = this.store.state.projects.find(p => p.id === projectId); if (!p) throw new Error('Unknown project.'); return p; }
   tab(projectId, tabId) { const tab = (this.project(projectId).browserTabs || []).find(t => t.id === tabId); if (!tab) throw new Error('Unknown browser tab.'); return tab; }
@@ -37,6 +66,7 @@ class ResearchBrowser {
     wc.on('will-navigate', navigation); wc.on('will-redirect', navigation);
     wc.setWindowOpenHandler(({url}) => { try { const safe=normalizeBrowserURL(url); this.create(projectId,safe).catch(e=>{entry.error=e.message;emit();}); } catch {} return {action:'deny'}; });
     wc.on('did-start-loading',()=>{entry.error='';emit();}); wc.on('did-stop-loading',emit);
+    wc.on('dom-ready', () => this.apply(wc));
     wc.on('did-navigate',persist); wc.on('did-navigate-in-page',persist); wc.on('page-title-updated',persist);
     wc.on('did-fail-load',(_event,code,description,_url,isMainFrame)=>{if(isMainFrame&&code!==-3){entry.error=`Could not load this page (${description}). Check the address or connection.`;emit();}});
     wc.on('render-process-gone',()=>{entry.error='This tab stopped responding. Reload to try again.';emit();});

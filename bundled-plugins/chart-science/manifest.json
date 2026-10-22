@@ -1,0 +1,22 @@
+{
+ "apiVersion": 1,
+ "id": "chart-science",
+ "name": "Science and maths",
+ "version": "1.0.0",
+ "description": "Plot equations, parametric and polar curves with sliders for every constant, find roots and areas, and lay measured points over the curve.",
+ "author": "Daevu",
+ "permissions": [],
+ "contributes": {
+  "boards": [
+   {
+    "id": "function",
+    "name": "Function plot",
+    "hint": "Plot equations, curves and parameters, with measured points on top.",
+    "group": "science",
+    "entry": "chart.html",
+    "sample": "x,y\n0,0.1\n1,0.9\n2,0.2"
+   }
+  ]
+ },
+ "panels": []
+}

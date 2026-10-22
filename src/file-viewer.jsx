@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FileText, ExternalLink, ZoomIn, ZoomOut, PanelLeft, ChevronLeft, ChevronRight, Maximize, BookOpen, Film, Music, File as FileIcon, AArrowUp, AArrowDown, List } from 'lucide-react';
+import { FileText, ExternalLink, Pencil, Check, ZoomIn, ZoomOut, PanelLeft, ChevronLeft, ChevronRight, Maximize, BookOpen, Film, Music, File as FileIcon, AArrowUp, AArrowDown, List } from 'lucide-react';
 import * as pdfjs from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import 'pdfjs-dist/web/pdf_viewer.css';
@@ -7,6 +7,8 @@ import JSZip from 'jszip';
 import DOMPurify from 'dompurify';
 import { api } from './api';
 import { Markdown } from './ui';
+import { PluginPage } from './plugins';
+import { useInstalledPlugins } from './chart-kinds';
 import './file-viewer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -15,17 +17,19 @@ const ext = name => (/\.([^.]+)$/.exec(name || '')?.[1] || '').toLowerCase();
 const TEXT = new Set(['txt', 'md', 'markdown', 'json', 'log', 'xml', 'yml', 'yaml', 'toml', 'ini', 'js', 'mjs', 'ts', 'tsx', 'jsx', 'css', 'html', 'py', 'rb', 'go', 'rs', 'java', 'c', 'h', 'cpp', 'sh', 'sql', 'csv', 'tsv']);
 const VIDEO = new Set(['mp4', 'webm', 'mov', 'm4v', 'ogv']), AUDIO = new Set(['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac']);
 export const viewerKind = name => { const e = ext(name); return e === 'pdf' ? 'pdf' : e === 'epub' ? 'epub' : VIDEO.has(e) ? 'video' : AUDIO.has(e) ? 'audio' : TEXT.has(e) && !['csv', 'tsv'].includes(e) ? 'text' : null; };
+// Editors that enabled plugins offer for this kind of file.
+export const editorsFor = (plugins, name) => plugins.filter(p => p.enabled).flatMap(plugin => (plugin.contributes?.fileEditors || []).filter(e => e.extensions.includes(ext(name))).map(editor => ({ plugin, editor })));
 const size = bytes => bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const MIME = { mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', m4v: 'video/mp4', ogv: 'video/ogg', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', m4a: 'audio/mp4', flac: 'audio/flac', aac: 'audio/aac' };
 
 // Bytes of a stored file, loaded once.
-function useBytes(projectId, fileId) {
+function useBytes(projectId, fileId, version) {
   const [state, setState] = useState({ bytes: null, error: '' });
   useEffect(() => {
     let live = true; setState({ bytes: null, error: '' });
     api.readFile(projectId, fileId).then(b => live && setState({ bytes: b instanceof Uint8Array ? b : new Uint8Array(b), error: '' })).catch(e => live && setState({ bytes: null, error: e.message }));
     return () => { live = false; };
-  }, [projectId, fileId]);
+  }, [projectId, fileId, version]);
   return state;
 }
 
@@ -177,10 +181,11 @@ function Message({ icon: Icon, children }) { return <div className="fv-message">
 
 // ---- The frame around every viewer.
 export function FileViewer({ project, file, onExternal }) {
-  const kind = viewerKind(file.name), { bytes, error } = useBytes(project.id, file.id), Icon = kind === 'video' ? Film : kind === 'audio' ? Music : kind === 'epub' ? BookOpen : kind ? FileText : FileIcon;
+  const plugins = useInstalledPlugins(), editors = editorsFor(plugins, file.name), [editing, setEditing] = useState(null), editor = editing && editors.find(e => e.plugin.id === editing.plugin.id && e.editor.id === editing.editor.id);
+  const kind = viewerKind(file.name), { bytes, error } = useBytes(project.id, file.id, file.contentHash), Icon = kind === 'video' ? Film : kind === 'audio' ? Music : kind === 'epub' ? BookOpen : kind ? FileText : FileIcon;
   return <div className="file-viewer">
-    <header className="fv-head"><span className="fv-tile"><Icon size={16}/></span><div><strong>{file.name}</strong><small>{ext(file.name).toUpperCase() || 'File'} · {size(file.size)}</small></div><button type="button" className="button secondary small-button" onClick={onExternal}><ExternalLink size={14}/>Open in another app</button></header>
-    {!kind ? <Message icon={FileIcon}>No preview for this kind of file.</Message> : error ? <Message icon={Icon}>{error}</Message> : !bytes ? <Message icon={Icon}>Opening…</Message> : kind === 'pdf' ? <PdfViewer key={file.id} bytes={bytes}/> : kind === 'epub' ? <EpubViewer key={file.id} bytes={bytes}/> : kind === 'text' ? <TextViewer bytes={bytes} name={file.name}/> : <MediaViewer bytes={bytes} name={file.name} kind={kind}/>}
+    <header className="fv-head"><span className="fv-tile"><Icon size={16}/></span><div><strong>{file.name}</strong><small>{ext(file.name).toUpperCase() || 'File'} · {size(file.size)}</small></div>{editor ? <button type="button" className="button primary small-button" onClick={() => setEditing(null)}><Check size={14}/>Done</button> : editors.map(e => <button key={e.plugin.id + e.editor.id} type="button" className="button secondary small-button" onClick={() => setEditing(e)}><Pencil size={14}/>{editors.length > 1 ? e.editor.name : 'Edit'}</button>)}<button type="button" className="button secondary small-button" onClick={onExternal}><ExternalLink size={14}/>Open in another app</button></header>
+    {editor ? <div className="fv-body fv-editor"><PluginPage plugin={editor.plugin} pageId={'editor:' + editor.editor.id} title={editor.editor.name} project={project} className="fv-editor-frame" local={{ 'file:get': () => ({ id: file.id, name: file.name, size: file.size }) }}/></div> : !kind ? <Message icon={FileIcon}>No preview for this kind of file.</Message> : error ? <Message icon={Icon}>{error}</Message> : !bytes ? <Message icon={Icon}>Opening…</Message> : kind === 'pdf' ? <PdfViewer key={file.id} bytes={bytes}/> : kind === 'epub' ? <EpubViewer key={file.id} bytes={bytes}/> : kind === 'text' ? <TextViewer bytes={bytes} name={file.name}/> : <MediaViewer bytes={bytes} name={file.name} kind={kind}/>}
   </div>;
 }
 

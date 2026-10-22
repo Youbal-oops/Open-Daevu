@@ -1,0 +1,54 @@
+{
+ "apiVersion": 1,
+ "id": "chart-statistics",
+ "name": "Statistics charts",
+ "version": "1.0.0",
+ "description": "Scatter plots with best-fit curves, histograms, box plots, heat maps and radar charts, drawn from your spreadsheets and document tables.",
+ "author": "Daevu",
+ "permissions": [],
+ "contributes": {
+  "boards": [
+   {
+    "id": "scatter",
+    "name": "Scatter plot",
+    "hint": "Points on two axes, with bubbles and best-fit curves.",
+    "group": "stats",
+    "entry": "chart.html",
+    "sample": "x,y\n1,2.1\n2,3.9\n3,6.2\n4,8.1\n5,9.8\n6,12.3\n7,13.9"
+   },
+   {
+    "id": "histogram",
+    "name": "Histogram",
+    "hint": "How values spread out, with mean and a normal curve.",
+    "group": "stats",
+    "entry": "chart.html",
+    "sample": "Score\n50\n50\n42\n48\n60\n60\n38\n40\n54\n63\n46\n49\n46\n50\n45\n64\n51\n43\n35\n64\n57\n51\n36\n56\n45\n57\n50\n59\n33\n49\n54\n68\n36\n46\n45\n63\n44\n59\n43\n48\n38\n68\n53\n47\n31\n61\n53\n56"
+   },
+   {
+    "id": "box",
+    "name": "Box plot",
+    "hint": "Median, quartiles and outliers for each column.",
+    "group": "stats",
+    "entry": "chart.html",
+    "sample": "Group A,Group B,Group C\n12,18,9\n14,21,10\n15,22,12\n13,19,11\n16,25,40\n14,20,10\n15,23,13"
+   },
+   {
+    "id": "heatmap",
+    "name": "Heat map",
+    "hint": "A grid of numbers shaded from low to high.",
+    "group": "stats",
+    "entry": "chart.html",
+    "sample": ",Mon,Tue,Wed,Thu,Fri\nMorning,4,7,9,6,3\nNoon,8,12,14,11,7\nAfternoon,6,9,10,8,5\nEvening,2,3,4,3,2"
+   },
+   {
+    "id": "radar",
+    "name": "Radar chart",
+    "hint": "Compare several measures at once on spokes.",
+    "group": "stats",
+    "entry": "chart.html",
+    "sample": "Skill,Ana,Ben\nSpeed,8,6\nPower,6,9\nSkill,9,7\nStamina,7,5\nFocus,8,8"
+   }
+  ]
+ },
+ "panels": []
+}

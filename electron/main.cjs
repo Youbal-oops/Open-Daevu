@@ -114,7 +114,7 @@ async function createWindow() {
   window.on('close', event => { if (!quitting && store.state.settings.keepRunning && tray) { event.preventDefault(); window.hide(); } });
   window.on('closed',()=>{pluginWeb?.destroy();pluginWeb=null;browser?.destroy();browser=null;window=null;appAskReady=false;});
   await window.loadURL(trustedURL);
-  browser = new ResearchBrowser(window,store,send);
+  browser = new ResearchBrowser(window,store,send);browser.usePlugins(()=>plugins?.list()||[]);
   pluginWeb=new PluginWebViews(window,plugins,send,{canWrite:()=>storage.writable});
   if (process.argv.includes('--background')) window.hide();
 }
@@ -213,7 +213,7 @@ app.whenReady().then(async () => {
     if(kind==='website'){if(!repository||typeof repository.name!=='string'||typeof repository.url!=='string')throw Error('Name the AI website and enter its URL.');return plugins.prepare({manifest:{apiVersion:1,id:'web-'+require('node:crypto').randomUUID().slice(0,8),name:repository.name,version:'1.0.0',description:'AI website panel',permissions:['web-chat','files:write','storage'],panels:[{id:'main',title:repository.name,type:'web-app',url:repository.url}]},files:{}});}
     if(kind==='builtin:browser-assistants')return plugins.prepare(path.join(__dirname,'../bundled-plugins/browser-assistants'));
     if(kind==='github')return plugins.prepare(await require('./plugin-github.cjs').githubPackage(repository));
-    if(['builtin:chatgpt-web','builtin:gemini-web'].includes(kind))return plugins.prepare(path.join(__dirname,'../bundled-plugins',kind.slice(8)));
+    if(['builtin:chatgpt-web','builtin:gemini-web','builtin:chart-statistics','builtin:chart-business','builtin:chart-science'].includes(kind))return plugins.prepare(path.join(__dirname,'../bundled-plugins',kind.slice(8)));
     if(!['folder','zip'].includes(kind))throw Error('Choose a folder or ZIP plugin package.');
     const selected=await dialog.showOpenDialog(window,{title:'Install workspace plugin',properties:[kind==='folder'?'openDirectory':'openFile'],...(kind==='zip'?{filters:[{name:'Workspace plugin',extensions:['zip']}]}:{})});
     return selected.canceled?null:plugins.prepare(selected.filePaths[0]);
@@ -418,6 +418,7 @@ app.whenReady().then(async () => {
   handle('schedule:run', id => scheduler.run(id, true));
   handle('schedule:tick', () => scheduler.tick());
   handle('browser:new', (projectId,url) => browser.create(projectId,url));
+  handle('browser:tool', (projectId,tabId,pluginId,toolId) => browser.runTool(projectId,tabId,pluginId,toolId));
   handle('browser:show', (projectId,tabId,rect) => browser.show(projectId,tabId,rect));
   handle('browser:hide', () => browser.hide());
   handle('browser:navigate', (projectId,tabId,url) => browser.navigate(projectId,tabId,url));

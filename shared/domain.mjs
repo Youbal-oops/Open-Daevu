@@ -181,7 +181,7 @@ function validateProject(projects, value, before) {
 const SHAPES = ['rect', 'roundrect', 'ellipse', 'diamond', 'hexagon', 'parallelogram', 'triangle', 'arrow'];
 const CANVAS_TYPES = ['sticky', 'text', ...SHAPES, 'frame', 'artifact', 'draw', 'diagram', 'link', 'image'];
 const DIAGRAM_INNER = ['sticky', 'text', ...SHAPES];
-const ARTIFACT_KINDS = ['kanban', 'bar', 'line', 'pie', 'html', 'database'];
+const ARTIFACT_KINDS = ['kanban', 'bar', 'line', 'area', 'pie', 'scatter', 'histogram', 'box', 'heatmap', 'radar', 'waterfall', 'funnel', 'gauge', 'function', 'plugin-board', 'dashboard', 'html', 'database'];
 const DB_PROPERTY_TYPES = ['title', 'text', 'number', 'select', 'date', 'checkbox'];
 const DB_VIEW_TYPES = ['table', 'board', 'gallery'];
 const PAGE_COVERS = ['', 'sage', 'sky', 'sand', 'rose', 'slate', 'violet'];
@@ -412,6 +412,7 @@ function applyMutation(state, action) {
       const value = action.value || {};
       if ('userAvatar' in value) validateAvatar(value.userAvatar);
       if('pinnedApps' in value&&(!Array.isArray(value.pinnedApps)||value.pinnedApps.length>100||value.pinnedApps.some(id=>typeof id!=='string'||id.length>260)))throw Error('Keep up to 100 pinned apps.');
+      if ('pluginTheme' in value && !/^([a-z0-9-]{1,60}:[a-z0-9-]{1,40})?$/.test(value.pluginTheme)) throw new Error('Choose a theme from a plugin.');
       if ('userName' in value && String(value.userName).length > 80) throw new Error('Keep your name under 80 characters.');
       if ('pluginPlacements' in value && (!value.pluginPlacements || typeof value.pluginPlacements !== 'object' || Array.isArray(value.pluginPlacements) || Object.keys(value.pluginPlacements).length > 100 || Object.entries(value.pluginPlacements).some(([key,placement]) => key.length > 100 || !['sidebar','pull-down','tab'].includes(placement)))) throw new Error('Choose sidebar, pull-down, or tab placement for each plugin.');
       if ('pluginIcons' in value && (!value.pluginIcons || typeof value.pluginIcons !== 'object' || Array.isArray(value.pluginIcons) || Object.keys(value.pluginIcons).length > 100 || Object.entries(value.pluginIcons).some(([key, icon]) => key.length > 100 || !PLUGIN_ICONS.includes(icon)))) throw new Error('Choose one of the listed icons for each plugin.');
@@ -565,6 +566,7 @@ function applyMutation(state, action) {
       const a = action.value || {};
       if (!/^[a-zA-Z0-9-]+$/.test(a.id || '') || !ARTIFACT_KINDS.includes(a.kind) || !String(a.title || '').trim()) throw new Error('A board or chart needs a title and a supported type.');
       if (a.kind !== 'html' && JSON.stringify(a.data || {}).length > 400000) throw new Error('This board is too large to save.');
+      if (a.kind === 'dashboard' && (!Array.isArray(a.data?.tiles) || a.data.tiles.length > 12 || a.data.tiles.some(t => !/^[a-zA-Z0-9-]+$/.test(t.id || '') || !ARTIFACT_KINDS.includes(t.kind) || ['dashboard', 'html', 'database'].includes(t.kind)))) throw new Error('A dashboard holds up to 12 charts.');
       if (a.kind === 'kanban' && (!Array.isArray(a.data?.columns) || a.data.columns.length > 20 || a.data.columns.some(c => !c.id || !Array.isArray(c.cards)))) throw new Error('A kanban board needs a list of columns.');
       if (a.kind === 'database') {
         const db = a.data || {};
@@ -574,7 +576,7 @@ function applyMutation(state, action) {
         if (!Array.isArray(db.views) || !db.views.length || db.views.length > 10 || !db.views.every(v => /^[a-zA-Z0-9-]+$/.test(v.id || '') && DB_VIEW_TYPES.includes(v.type))) throw new Error('A database needs at least one table, board, or gallery view.');
       }
       if (a.kind === 'html') validateApp(a.data || {});
-      if (!['kanban', 'html', 'database'].includes(a.kind) && typeof a.data?.csv !== 'string' && !a.data?.sheetId) throw new Error('A chart needs data or a spreadsheet.');
+      if (!['kanban', 'html', 'database', 'dashboard'].includes(a.kind) && typeof a.data?.csv !== 'string' && !a.data?.sheetId) throw new Error('A chart needs data or a spreadsheet.');
       project.artifacts ||= [];
       const record = { id: a.id, kind: a.kind, title: String(a.title).trim().slice(0, 160), data: a.data, createdAt: a.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
       const at = project.artifacts.findIndex(x => x.id === record.id);

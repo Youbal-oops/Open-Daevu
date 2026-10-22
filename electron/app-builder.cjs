@@ -4,7 +4,7 @@ if(__dirname.includes('app.asar') && process.platform==='win32')process.env.ESBU
 const esbuild = require('esbuild');
 const {parse,serialize,parseFragment}=require('parse5');
 const {validateFiles, appPath} = require('../shared/app-project.mjs');
-const libs = ['three', 'phaser'];
+const libs = ['three', 'phaser', 'react', 'react-dom'];
 const escaped = text => text.replace(/<\/script/gi, '<\\/script');
 function localPath(specifier, from = 'index.html') {
   if (/^[a-z]+:|^\/|[?#]/i.test(specifier)) throw Error('Use a local file path: ' + specifier);
@@ -24,7 +24,7 @@ async function buildApp(input) {
         const content=files[localPath(args.path,args.importer)];if(!content?.startsWith('data:'))throw Error('CSS assets need a local data URL file.');return {path:content,external:true};
       }
       if (libs.some(lib => args.path===lib || args.path.startsWith(lib + '/'))) return {path:libraryPath(args.path),namespace:'file'};
-      if (!args.path.startsWith('.') && args.importer && !Object.hasOwn(files,args.path)) throw Error('Bundled libraries: three, phaser. Use relative imports for app files.');
+      if (!args.path.startsWith('.') && args.importer && !Object.hasOwn(files,args.path)) throw Error('Bundled libraries: three, phaser, react, react-dom. Use relative imports for app files.');
       const base = args.importer || 'index.html', resolved = localPath(args.path, base);
       const name = [resolved, resolved+'.js', resolved+'.ts', resolved+'.jsx', resolved+'/index.js'].find(p => Object.hasOwn(files,p));
       if (!name) throw Error('Missing app file: ' + resolved);
@@ -33,14 +33,14 @@ async function buildApp(input) {
     build.onLoad({filter:/.*/,namespace:'app'}, args => {
       const ext = path.extname(args.path).slice(1);
       if (ext === 'css') return {contents:files[args.path],loader:'css'};
-      if (['js','jsx','ts','tsx','json'].includes(ext)) return {contents:files[args.path],loader:ext};
+      if (['js','mjs','jsx','ts','tsx','json'].includes(ext)) return {contents:files[args.path],loader:ext==='mjs'?'js':ext};
       // Asset files contain a data URL; text files can also be imported as strings.
       return {contents:'export default ' + JSON.stringify(files[args.path]),loader:'js'};
     });
     // Package internals may read only installed library files, never user-supplied host paths.
     build.onLoad({filter:/.*/,namespace:'file'}, args => {
       const normalized=args.path.replaceAll('\\','/');
-      if (!/\/node_modules\/(three|phaser|eventemitter3)\//.test(normalized)) throw Error('App imports cannot read computer files.');
+      if (!/\/node_modules\/(three|phaser|eventemitter3|react|react-dom|scheduler)\//.test(normalized)) throw Error('App imports cannot read computer files.');
       return {contents:fs.readFileSync(args.path),loader:path.extname(args.path)==='.json'?'json':'js',resolveDir:path.dirname(args.path)};
     });
   }};

@@ -1,7 +1,7 @@
 const fs=require('node:fs/promises'),path=require('node:path'),zlib=require('node:zlib');
 const {appPath}=require('../shared/app-project.mjs');
 const {validatePlugin}=require('../shared/plugins.mjs');
-const TEXT=/\.(html?|css|js|jsx|ts|tsx|json|txt|md|csv|glsl|vert|frag)$/i;
+const TEXT=/\.(html?|css|js|mjs|jsx|ts|tsx|json|txt|md|csv|glsl|vert|frag)$/i;
 const MIMES={svg:'image/svg+xml',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',gif:'image/gif',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',glb:'model/gltf-binary',woff2:'font/woff2'};
 function decodePackage(entries){
  if(!entries.has('manifest.json'))throw Error('Place manifest.json at the root of the plugin folder or ZIP.');

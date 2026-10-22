@@ -1,0 +1,38 @@
+{
+ "apiVersion": 1,
+ "id": "chart-business",
+ "name": "Business charts",
+ "version": "1.0.0",
+ "description": "Waterfalls, funnels and gauges for budgets, pipelines and targets, drawn from your spreadsheets and document tables.",
+ "author": "Daevu",
+ "permissions": [],
+ "contributes": {
+  "boards": [
+   {
+    "id": "waterfall",
+    "name": "Waterfall",
+    "hint": "How steps add up to a total.",
+    "group": "business",
+    "entry": "chart.html",
+    "sample": "Step,Change\nStart,100\nSales,40\nCosts,-25\nRefunds,-8\nTotal,0"
+   },
+   {
+    "id": "funnel",
+    "name": "Funnel",
+    "hint": "Stages that narrow, with the drop between them.",
+    "group": "business",
+    "entry": "chart.html",
+    "sample": "Stage,Count\nVisitors,5000\nSign-ups,1200\nTrials,640\nCustomers,210"
+   },
+   {
+    "id": "gauge",
+    "name": "Gauge",
+    "hint": "One number against a range and a target.",
+    "group": "business",
+    "entry": "chart.html",
+    "sample": "Metric,Value\nCompletion,72"
+   }
+  ]
+ },
+ "panels": []
+}

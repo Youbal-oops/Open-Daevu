@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { BringToFront, ImageOff, SeparatorHorizontal, Trash2, WrapText } from 'lucide-react';
+import { useContextMenu } from './context-menu';
+import { ArrowUpRight, BringToFront, ImageOff, SeparatorHorizontal, Trash2, WrapText } from 'lucide-react';
 import { api } from './api';
 import { uid } from './ui';
 import { planFlow, makeFit } from './flow';
@@ -64,6 +65,7 @@ export function usePicture(projectId, image) {
   const [state, setState] = useState({ url: image.src || null, failed: false });
   useEffect(() => {
     let live = true;
+    if (image.chartId) return;
     if (image.src) { setState({ url: image.src, failed: false }); return; }
     pictureUrl(projectId, image).then(url => live && setState({ url, failed: false })).catch(() => live && setState({ url: null, failed: true }));
     return () => { live = false; };
@@ -114,7 +116,7 @@ function settle(old, next) {
 }
 
 // Pictures, the plan for the text around them, and everything you can do with them.
-export function useFloatBoard({ projectId, images = [], onImages, signature = '', onError }) {
+export function useFloatBoard({ projectId, images = [], onImages, signature = '', onError, charts }) {
   const rootRef = useRef(null), natural = useRef(null), [live, setLive] = useState(null), [selected, setSelected] = useState(null), [plan, setPlan] = useState({}), [reach, setReach] = useState(0), [column, setColumn] = useState(0);
   const latest = useRef({ images, onImages }); latest.current = { images, onImages };
   // In a narrower column pictures shrink and slide left instead of hanging out.
@@ -197,6 +199,13 @@ export function useFloatBoard({ projectId, images = [], onImages, signature = ''
     } catch (error) { onError?.(error.message || 'Could not add that picture.'); return true; }
   }, [projectId, commit, onError]);
 
+  // A chart sits in the page like a picture: it can be moved and sized, and the text wraps round it.
+  const addChart = useCallback((chartId, blockId) => {
+    const root = rootRef.current, width = root?.getBoundingClientRect().width || 700, base = root?.getBoundingClientRect(), row = blockId && root?.querySelector(`[data-block-id="${CSS.escape(blockId)}"]`);
+    const w = Math.round(Math.min(width, 380)), y = row && base ? row.getBoundingClientRect().top - base.top + root.scrollTop : 0, made = { id: uid(), chartId, name: '', x: Math.round(Math.max(0, width - w)), y: Math.round(Math.max(0, y)), w, h: 270, wrap: 'around' };
+    commit([...latest.current.images, made]); setSelected(made.id);
+  }, [commit]);
+
   const rootProps = {
     ref: rootRef,
     onPasteCapture: e => { const files = [...(e.clipboardData?.files || [])].filter(f => ACCEPT.test(f.type)); if (!files.length) return; e.preventDefault(); e.stopPropagation(); addFiles(files); },
@@ -205,7 +214,7 @@ export function useFloatBoard({ projectId, images = [], onImages, signature = ''
     onPointerDown: e => { if (!e.target.closest?.('.float-img')) setSelected(null); },
     style: { minHeight: reach ? reach + 24 : undefined }
   };
-  return { rootRef, rootProps, images: shown, plan, selected, setSelected, setLive, patch, remove, commit, addFiles, projectId, signature };
+  return { rootRef, rootProps, images: shown, plan, selected, setSelected, setLive, patch, remove, commit, addFiles, addChart, charts, projectId, signature };
 }
 
 // Spacers that shorten the text beside a picture; they go just before the text.
@@ -215,7 +224,8 @@ export function FlowSlot({ plan, children }) {
 export const FlowPush = ({ plan }) => plan?.push > 0 ? <div className="flow-push" aria-hidden="true" style={{ height: plan.push }}/> : null;
 
 function Picture({ board, image }) {
-  const { url, failed } = usePicture(board.projectId, image), ref = useRef(null), selected = board.selected === image.id;
+  const { url, failed } = usePicture(board.projectId, image), ref = useRef(null), selected = board.selected === image.id, ctx = useContextMenu();
+  const menu = e => { board.setSelected(image.id); ctx.open(e, [...(image.chartId ? [{ label: 'Open chart', icon: ArrowUpRight, onClick: () => board.charts?.open(image.chartId) }, 'separator'] : []), ...WRAPS.map(([value, Icon, label]) => ({ label, icon: Icon, onClick: () => board.patch(image.id, { wrap: value }) })), 'separator', { label: image.chartId ? 'Remove chart' : 'Delete picture', icon: Trash2, danger: true, onClick: () => board.remove(image.id) }]); };
   const column = () => ref.current.parentElement.getBoundingClientRect().width;
 
   function begin(event, mode, corner) {
@@ -255,12 +265,13 @@ function Picture({ board, image }) {
   }
   const barBelow = image.y < 46;
   return <div ref={ref} className={`float-img wrap-${image.wrap || 'around'}${selected ? ' selected' : ''}${failed ? ' failed' : ''}`} tabIndex={0} role="img" aria-label={image.name || 'Picture'}
-    style={{ left: image.x, top: image.y, width: image.w, height: image.h }} onPointerDown={e => begin(e, 'move')} onKeyDown={key} onFocus={() => board.setSelected(image.id)}>
-    {url ? <img src={url} alt={image.name || ''} draggable={false}/> : <div className="float-img-empty">{failed ? <><ImageOff size={20}/><span>Picture not found</span></> : null}</div>}
+    style={{ left: image.x, top: image.y, width: image.w, height: image.h }} onPointerDown={e => begin(e, 'move')} onContextMenu={menu} onKeyDown={key} onFocus={() => board.setSelected(image.id)}>{ctx.element}
+    {image.chartId ? <div className="float-chart">{board.charts?.render(image.chartId)}</div> : url ? <img src={url} alt={image.name || ''} draggable={false}/> : <div className="float-img-empty">{failed ? <><ImageOff size={20}/><span>Picture not found</span></> : null}</div>}
     {selected && <>
       {['nw', 'ne', 'sw', 'se'].map(corner => <span key={corner} className={`float-handle ${corner}`} onPointerDown={e => begin(e, 'resize', corner)}/>)}
       <div className={`float-bar${barBelow ? ' below' : ''}`} onPointerDown={e => e.stopPropagation()}>
         {WRAPS.map(([value, Icon, label]) => <button key={value} type="button" className={(image.wrap || 'around') === value ? 'on' : ''} aria-label={label} title={label} onClick={() => board.patch(image.id, { wrap: value })}><Icon size={15}/></button>)}
+        {image.chartId && <button type="button" aria-label="Open chart" title="Open chart" onClick={() => board.charts?.open(image.chartId)}><ArrowUpRight size={15}/></button>}
         <span className="float-bar-sep"/>
         <button type="button" aria-label="Remove picture" title="Remove picture (Delete)" onClick={() => board.remove(image.id)}><Trash2 size={15}/></button>
       </div>

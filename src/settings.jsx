@@ -3,6 +3,7 @@ import { Settings2, Palette, Bot, HardDrive, Download, Info, Sun, Moon, Check, C
 import { api } from './api';
 import { UserAvatar } from './ui';
 import { useDock } from './dock';
+import { useInstalledPlugins, pluginThemes } from './chart-kinds';
 
 // The menu that opens from your name at the bottom of the project list.
 export function ProfileMenu({ settings, theme, storage, update, onProfile, onSettings, onConnections, onTheme, onUpdates }) {
@@ -49,6 +50,7 @@ function Segmented({ value, options, onChange, label }) {
 const SECTIONS = [['general', 'General', Settings2, 'gray'], ['appearance', 'Appearance', Palette, 'purple'], ['agents', 'Agents', Bot, 'green'], ['storage', 'Storage', HardDrive, 'blue'], ['updates', 'Updates', Download, 'orange'], ['about', 'About', Info, 'gray']];
 
 export function SettingsWindow({ state, act, perform, update, section = 'general', onClose, onConnections }) {
+  const themes = pluginThemes(useInstalledPlugins()), chosen = state.settings.pluginTheme || '';
   const [active, setActive] = useState(section), [error, setError] = useState(''), [leaving, setLeaving] = useState(false), [wipe, setWipe] = useState(false), [checking, setChecking] = useState(false), [note, setNote] = useState('');
   const settings = state.settings, { dock, setSide, resetWidth, swap } = useDock(), desktop = Boolean(window.workspace);
   useEffect(() => { const key = e => { if (e.key === 'Escape') onClose(); }; document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key); }, []);
@@ -62,7 +64,7 @@ export function SettingsWindow({ state, act, perform, update, section = 'general
       <Group title="Startup"><Row title="Open when I sign in to Windows"><Switch label="Launch at login" on={Boolean(settings.launchAtLogin)} onChange={v => save({ launchAtLogin: v })}/></Row><Row title="Keep running when the window closes"><Switch label="Keep running in the tray" on={settings.keepRunning !== false} onChange={v => save({ keepRunning: v })}/></Row></Group>
     </>,
     appearance: <>
-      <Group title="Theme"><div className="theme-cards">{[['light', Sun, 'Light'], ['dark', Moon, 'Dark']].map(([value, Icon, label]) => <button key={value} type="button" className={`theme-card ${value}${state.theme === value ? ' on' : ''}`} aria-pressed={state.theme === value} onClick={() => act({ type: 'theme', value })}><span className="theme-preview"><i/><i/><i/></span><span className="theme-label"><Icon size={14}/>{label}{state.theme === value && <Check size={14}/>}</span></button>)}</div></Group>
+      <Group title="Theme"><div className="theme-cards">{[['light', Sun, 'Light'], ['dark', Moon, 'Dark']].map(([value, Icon, label]) => <button key={value} type="button" className={`theme-card ${value}${state.theme === value ? ' on' : ''}`} aria-pressed={state.theme === value && !chosen} onClick={() => perform(async () => { await act({ type: 'theme', value }); if (chosen) await act({ type: 'settings', value: { pluginTheme: '' } }); })}><span className="theme-preview"><i/><i/><i/></span><span className="theme-label"><Icon size={14}/>{label}{state.theme === value && !chosen && <Check size={14}/>}</span></button>)}{themes.map(t => <button key={t.key} type="button" className={`theme-card ${t.mode}${chosen === t.key ? ' on' : ''}`} aria-pressed={chosen === t.key} onClick={() => perform(async () => { await act({ type: 'theme', value: t.mode }); await act({ type: 'settings', value: { pluginTheme: t.key } }); })}><span className="theme-preview" style={t.vars}><i/><i/><i/></span><span className="theme-label">{t.name}{chosen === t.key && <Check size={14}/>}</span></button>)}</div></Group>
       <Group title="Layout"><Row title="Project list"><Segmented label="Project list side" value={dock.sidebarSide} options={[['left', 'Left', PanelLeft], ['right', 'Right', PanelRight]]} onChange={v => setSide('sidebar', v)}/></Row><Row title="Chat"><Segmented label="Chat side" value={dock.chatSide} options={[['left', 'Left', PanelLeft], ['right', 'Right', PanelRight]]} onChange={v => setSide('chat', v)}/></Row><Row title="Swap sides"><button type="button" className="button secondary small-button" onClick={swap}>Swap</button></Row><Row title="Column widths"><button type="button" className="button secondary small-button" onClick={() => { resetWidth('chat'); resetWidth('sidebar'); }}>Reset</button></Row></Group>
     </>,
     agents: <>

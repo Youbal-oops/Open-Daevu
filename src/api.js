@@ -38,6 +38,7 @@ const preview = {
   async browserClose(projectId,tabId){return previewUpdate(s=>{const p=s.projects.find(p=>p.id===projectId);p.browserTabs=p.browserTabs.filter(t=>t.id!==tabId);p.browserActiveTab=p.browserTabs.at(-1)?.id;return s;});},
   async browserNavigate(projectId,tabId,url){return previewUpdate(s=>{const t=s.projects.find(p=>p.id===projectId).browserTabs.find(t=>t.id===tabId);t.url=normalizeBrowserURL(url);return s;});},
   async browserShow(){return null;},async browserHide(){},async browserAction(){},
+  async browserTool(){throw new Error('Browser tools need the desktop app.');},
   async browserCapture(){throw new Error('Page capture requires the native desktop browser.');},
   onBrowserState(){return()=>{};},onQuickCapture(){return()=>{};},async calendarImport(){throw new Error('Importing calendars needs the desktop app.');},async calendarExport(){throw new Error('Exporting calendars needs the desktop app.');},async fileImage(){throw new Error('Opening images in the app needs the desktop app.');},setTitleBar(){},onDeepLink(){return()=>{};},async pendingLink(){return null;},onBrowserFocus(){return()=>{};},
   async toolsList() { return { tools: BUILTIN_TOOLS.map(t => ({ id: t.id, kind: 'builtin', name: t.name, source: 'Built in', detail: t.detail })), warnings: ['MCP server discovery requires the desktop app.'] }; },

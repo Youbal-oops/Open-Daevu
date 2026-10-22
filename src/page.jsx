@@ -1,10 +1,12 @@
 import { CommentsPanel } from './comments';
 import { MessageSquare as CommentIcon } from 'lucide-react';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AppWindow, Gauge, Link2, ListOrdered, ChevronRight as Chevron, Code2, SmilePlus, ImagePlus, Plus, GripVertical, Type, Heading1, Heading2, Heading3, List, CheckSquare, Square, Quote, Lightbulb, Minus, FileText, Table2, Upload, Paperclip, Folder, ArrowUpRight, Trash2, Star, LayoutDashboard, Network, Kanban, Undo2, Redo2 } from 'lucide-react';
+import { AppWindow, Gauge, Link2, ListOrdered, ChevronRight as Chevron, Code2, SmilePlus, ImagePlus, Plus, GripVertical, Type, Heading1, Heading2, Heading3, List, CheckSquare, Square, Quote, Lightbulb, Minus, FileText, Table2, Upload, Paperclip, Folder, ArrowUpRight, Trash2, Copy, Star, LayoutDashboard, Network, Kanban, Undo2, Redo2 } from 'lucide-react';
 import { api } from './api';
-import { uid, now, date } from './ui';
-import { KINDS, kindIcon, kindName, newArtifact, ArtifactPreview, KanbanBoard } from './boards';
+import { createPortal } from 'react-dom';
+import { uid, now, date, Modal } from './ui';
+import { kindIcon, kindName, newArtifact, ArtifactPreview, KanbanBoard } from './boards';
+import { useBoardKinds, useInstalledPlugins, missingPlugin } from './chart-kinds';
 import { Database } from './database';
 import { kpiValue, evaluateExpression } from '../shared/domain.mjs';
 import { SheetEmbed, DocEmbed } from './canvas';
@@ -18,6 +20,8 @@ import { blockMenuItems, EmojiPopup } from './block-menu';
 import { useFloatBoard, useImagePicker, ImageLayer, FlowSlot, FlowPush } from './float-images';
 
 const TEXT_BLOCKS = [['p', 'Text', Type, 'Plain text'], ['h1', 'Heading 1', Heading1, 'Big section heading'], ['h2', 'Heading 2', Heading2, 'Medium heading'], ['h3', 'Heading 3', Heading3, 'Small heading'], ['bullet', 'Bulleted list', List, 'A simple list'], ['numbered', 'Numbered list', ListOrdered, 'A list with numbering'], ['toggle', 'Toggle list', Chevron, 'Hide content inside a heading'], ['code', 'Code', Code2, 'Capture a code snippet'], ['table', 'Table', Table2, 'Rows and columns you can edit'], ['image', 'Image', ImagePlus, 'Place a picture the text wraps around'], ['metric', 'Live value', Gauge, 'Show a number from your project'], ['todo', 'To-do', CheckSquare, 'Track a task'], ['quote', 'Quote', Quote, 'Capture a quote'], ['callout', 'Callout', Lightbulb, 'Make text stand out'], ['divider', 'Divider', Minus, 'Visually separate sections']];
+// One entry per kind of thing already in the project; each opens a picker of what exists.
+const PICKS = [['note', 'Document', FileText, 'Embed a document'], ['sheet', 'Spreadsheet', Table2, 'Embed a spreadsheet'], ['file', 'File', Paperclip, 'Embed a file'], ['app', 'App', AppWindow, 'Embed an app'], ['board', 'Board', Kanban, 'Embed a board or chart'], ['folder', 'Folder', Folder, 'Link a work folder']];
 const NO_TEXT = ['embed', 'divider', 'table', 'metric'], FLOW_TEXT = new Set(['p', 'h1', 'h2', 'h3', 'bullet', 'numbered', 'todo']);
 const block = (type = 'p', text = '', extra = {}) => ({ id: uid(), type, text, ...extra });
 const SHORTCUTS = [[/^# $/, 'h1'], [/^## $/, 'h2'], [/^### $/, 'h3'], [/^[-*] $/, 'bullet'], [/^\[\] $/, 'todo'], [/^> $/, 'quote'], [/^1\. $/, 'numbered'], [/^```$/, 'code']];
@@ -111,7 +115,8 @@ export function ProjectPage({ onOpenFile, commentActions, onCopyLink, projectLin
   const ctx = useContextMenu(), [emoji, setEmoji] = useState(null);
   // Right-click on a line of text: emoji at the click, change the block's kind, duplicate or delete it.
   const blockContext = (e, b) => {
-    if (NO_TEXT.includes(b.type) || b.type === 'code') return;
+    if (b.type === 'table') return;
+    if (NO_TEXT.includes(b.type) || b.type === 'code') { ctx.open(e, [{ label: 'Duplicate', icon: Copy, onClick: () => insertAfter(b.id, [{ ...b, id: uid() }]) }, { label: 'Delete', icon: Trash2, danger: true, onClick: () => remove(b.id) }]); return; }
     const el = e.target.closest('[data-flow-text]');
     let at = b.text.length;
     if (el?.classList.contains('formatted')) { const shown = clickedOffset(e, el); if (shown != null) at = storedOffset(b.text, shown); } else if (el) at = caretOf(el).start;
@@ -122,42 +127,30 @@ export function ProjectPage({ onOpenFile, commentActions, onCopyLink, projectLin
   const insertAfter = (id, items) => edit(list => { const at = list.findIndex(b => b.id === id); return [...list.slice(0, at + 1), ...items, ...list.slice(at + 1)]; });
   const remove = id => edit(list => list.length > 1 ? list.filter(b => b.id !== id) : [block()]);
 
+  const installed = useInstalledPlugins(), [choosing, setChoosing] = useState(null);
   const entries = useMemo(() => {
     const q = (menu?.query || '').toLowerCase();
-    const list = [...TEXT_BLOCKS.map(([type, label, Icon, hint]) => ({ kind: 'type', type, label, Icon, hint, group: 'Basic blocks' })).flatMap(e => e.type === 'table' ? [e, { kind: 'new', what: 'kanban', label: 'Board', Icon: Kanban, hint: 'A kanban board right on the page. Drag it anywhere', group: 'Basic blocks' }] : [e]),
-      { kind: 'new', what: 'note', label: 'New document', Icon: FileText, hint: 'Create a page and embed it', group: 'Create & embed' }, { kind: 'new', what: 'sheet', label: 'New spreadsheet', Icon: Table2, hint: 'Create a sheet and embed it', group: 'Create & embed' },
-      ...KINDS.filter(([k]) => k !== 'kanban').map(([k, label, Icon, hint]) => ({ kind: 'new', what: k, label: k === 'kanban' ? 'New board' : `New ${label.toLowerCase()}`, Icon, hint, group: 'Create & embed' })),
-      { kind: 'new', what: 'app', label: 'New app', Icon: AppWindow, hint: 'A blank page you or AI can build anything in', group: 'Create & embed' },
-      { kind: 'import', label: 'Import files', Icon: Upload, hint: 'Documents, sheets, PDFs, images…', group: 'Import' },
-      ...project.notes.map(n => ({ kind: 'ref', refType: 'note', refId: n.id, label: n.title, Icon: n.kind === 'sheet' ? Table2 : FileText, hint: n.kind === 'sheet' ? 'Embed spreadsheet' : 'Embed document', group: 'Embed existing' })),
-      ...(project.artifacts || []).map(a => ({ kind: 'ref', refType: 'artifact', refId: a.id, label: a.title, Icon: kindIcon(a.kind), hint: `Embed ${kindName(a.kind).toLowerCase()}`, group: 'Embed existing' })),
-      ...project.files.map(f => ({ kind: 'ref', refType: 'file', refId: f.id, label: f.name, Icon: Paperclip, hint: 'Embed attachment', group: 'Embed existing' })),
-      ...children.map(c => ({ kind: 'ref', refType: 'folder', refId: c.id, label: c.name, Icon: Folder, hint: 'Link work folder', group: 'Embed existing' }))];
-    return list.filter(e => !q || `${e.label} ${e.hint}`.toLowerCase().includes(q)).slice(0, 16);
-  }, [menu?.query, project, children.length]);
+    const have = { note: project.notes.filter(n => n.kind !== 'sheet').length, sheet: project.notes.filter(n => n.kind === 'sheet').length, file: project.files.length, app: (project.artifacts || []).filter(a => a.kind === 'html').length, board: (project.artifacts || []).filter(a => a.kind !== 'html' && !missingPlugin(a, installed)).length, folder: children.length };
+    const list = [...TEXT_BLOCKS.map(([type, label, Icon, hint]) => ({ kind: 'type', type, label, Icon, hint, group: 'Basic blocks' })),
+      ...PICKS.filter(([what]) => have[what] > 0).map(([what, label, Icon, hint]) => ({ kind: 'pick', what, label, Icon, hint: `${hint} · ${have[what]} in this project`, group: 'From this project' }))];
+    return list.filter(e => !q || `${e.label} ${e.hint}`.toLowerCase().includes(q)).slice(0, 60);
+  }, [menu?.query, project, children.length, installed]);
 
   async function run(entry, id) {
     setMenu(null);
     const clearHere =() => patch(id, { text: '' });
     if (entry.kind === 'type' && entry.type === 'image') { patch(id, { text: '' }); setFocus({ id }); return imagePicker.open(); }
     if (entry.kind === 'type') { patch(id, { type: entry.type, text: entry.type === 'table' ? TABLE_TEMPLATE : '' }); if (entry.type === 'table') { insertAfter(id, [block()]); return setFocus(null); } if (entry.type === 'divider') { insertAfter(id, [block()]); } return setFocus({ id: entry.type === 'divider' ? null : id }); }
-    const embed = (refType, refId) => { const nb = block('p'); edit(list => { const at = list.findIndex(b => b.id === id), replace = /^\/\S*$/.test(list[at]?.text || ''); const embedBlock = block('embed', '', { refType, refId }); const out = [...list]; out.splice(replace ? at : at + 1, replace ? 1 : 0, embedBlock, nb); return out; }); setFocus({ id: nb.id }); };
-    if (entry.kind === 'ref') return embed(entry.refType, entry.refId);
-    if (entry.kind === 'new') {
-      clearHere();
-      if (entry.what === 'note' || entry.what === 'sheet') { const note = { id: uid(), title: entry.what === 'sheet' ? 'Untitled spreadsheet' : 'Untitled note', content: entry.what === 'sheet' ? 'Topic,Finding,Source\n,,' : '', kind: entry.what, author: 'You', createdAt: now(), updatedAt: now(), position: { x: 80, y: 90 + project.notes.length * 30 } }; await perform(() => act({ type: 'note', projectId: project.id, value: note })); return embed('note', note.id); }
-      const artifact = newArtifact(entry.what); await perform(() => act({ type: 'artifact', projectId: project.id, value: artifact })); return embed('artifact', artifact.id);
-    }
-    if (entry.kind === 'import') {
-      clearHere();
-      const before = new Set([...project.notes.map(n => n.id), ...project.files.map(f => f.id)]);
-      await perform(() => api.importFiles(project.id));
-      const fresh = await loadFresh(project.id); if (!fresh) return;
-      const added = [...fresh.notes.filter(n => !before.has(n.id)).map(n => ['note', n.id]), ...fresh.files.filter(f => !before.has(f.id) && !fresh.notes.some(n => n.title === f.name.replace(/\.[^.]+$/, ''))).map(f => ['file', f.id])];
-      if (!added.length) return;
-      const nb = block('p'); edit(list => { const at = list.findIndex(b => b.id === id), replace = /^\/?\S*$/.test(list[at]?.text || ''); const out = [...list]; out.splice(replace ? at : at + 1, replace ? 1 : 0, ...added.map(([refType, refId]) => block('embed', '', { refType, refId })), nb); return out; }); setFocus({ id: nb.id });
-    }
+    if (entry.kind === 'pick') return setChoosing({ what: entry.what, id });
   }
+  // Puts an item that already exists in this project onto the page, in place of the line that asked for it.
+  function embedAt(id, refType, refId) { const nb = block('p'); edit(list => { const at = list.findIndex(b => b.id === id), replace = /^\/.*$/.test(list[at]?.text || ''); const out = [...list]; out.splice(replace ? at : at + 1, replace ? 1 : 0, block('embed', '', { refType, refId }), nb); return out; }); setFocus({ id: nb.id }); }
+  const pickItems = what => what === 'note' ? project.notes.filter(n => n.kind !== 'sheet').map(n => ({ refType: 'note', refId: n.id, label: n.title, Icon: FileText, hint: 'Document' }))
+    : what === 'sheet' ? project.notes.filter(n => n.kind === 'sheet').map(n => ({ refType: 'note', refId: n.id, label: n.title, Icon: Table2, hint: 'Spreadsheet' }))
+    : what === 'file' ? project.files.map(f => ({ refType: 'file', refId: f.id, label: f.name, Icon: Paperclip, hint: 'File' }))
+    : what === 'app' ? (project.artifacts || []).filter(a => a.kind === 'html').map(a => ({ refType: 'artifact', refId: a.id, label: a.title, Icon: AppWindow, hint: 'App' }))
+    : what === 'folder' ? children.map(c => ({ refType: 'folder', refId: c.id, label: c.name, Icon: Folder, hint: 'Work folder' }))
+    : (project.artifacts || []).filter(a => a.kind !== 'html' && !missingPlugin(a, installed)).map(a => ({ refType: 'artifact', refId: a.id, label: a.title, Icon: kindIcon(a.kind), hint: kindName(a.kind) }));
   function onText(b, value, caret) {
     if (b.type === 'p') { const short = SHORTCUTS.find(([re]) => re.test(value)); if (short) { patch(b.id, { type: short[1], text: '' }); return; } }
     patch(b.id, { text: value });
@@ -222,11 +215,21 @@ export function ProjectPage({ onOpenFile, commentActions, onCopyLink, projectLin
     <div className="page-props"><label><span>Status</span><select className={`work-status ${project.status || 'active'}`} aria-label="Work status" value={project.status || 'active'} onChange={e => onStatus(e.target.value)}><option value="planned">Planned</option><option value="active">In progress</option><option value="done">Complete</option></select></label>
       {kpis.map(k => <button key={k.id} className="prop-chip" data-ref={JSON.stringify({ type: 'kpi', kpiId: k.id })} onClick={() => onKpi(k)}><span>{k.label}</span><strong>{kpiValue(project, k) || '—'}{k.unit ? ` ${k.unit}` : ''}</strong>{k.target && <small>/ {k.target}</small>}</button>)}<button className="prop-add" onClick={() => onKpi()}><Plus size={13}/>Metric</button><button className="prop-add" onClick={onRefs}><Link2 size={13}/>References{(project.refs || []).length ? ` · ${project.refs.length}` : ''}</button><button className="prop-add" onClick={() => { setCommentsOpen(v => !v); setCommentBlock(null); }}><CommentIcon size={13}/>Comments{openCount ? ` · ${openCount}` : ''}</button><span className="prop-undo"><button type="button" className="prop-add" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={history.undo}><Undo2 size={13}/></button><button type="button" className="prop-add" aria-label="Redo" title="Redo (Ctrl+Y)" disabled={!history.canRedo} onClick={history.redo}><Redo2 size={13}/></button></span><button className="prop-add" onClick={imagePicker.open}><ImagePlus size={13}/>Image</button><button className="prop-add" onClick={onCopyLink}><Link2 size={13}/>Copy link</button></div>
     <div className="page-folders">{children.map(c => <button key={c.id} onClick={() => onOpenProject(c.id)}><Folder size={15}/>{c.name}<ArrowUpRight size={12}/></button>)}<button className="prop-add" onClick={onFolder}><Plus size={13}/>Work folder</button></div></div>
-  <div {...board.rootProps} onKeyDown={history.onKeyDown} className="page-blocks flow-root" role="document" aria-label="Page content">{ctx.element}{emoji && <EmojiPopup x={emoji.x} y={emoji.y} onClose={() => setEmoji(null)} onPick={i => { const cur = blocks.find(x => x.id === emoji.id); if (cur) { patch(cur.id, { text: cur.text.slice(0, emoji.at) + i + cur.text.slice(emoji.at) }); setFocus({ id: cur.id, caret: emoji.at + i.length }); } }}/>}{imagePicker.element}<ImageLayer board={board}/>{blocks.map((b, i) => <React.Fragment key={b.id}><FlowPush plan={board.plan[b.id]}/><div data-block-id={b.id} onContextMenu={e => blockContext(e, b)} data-flow={FLOW_TEXT.has(b.type) ? 'text' : 'solid'} data-ref={['embed', 'divider', 'metric'].includes(b.type) ? undefined : JSON.stringify({ type: 'block', blockId: b.id })} className={`block-row ${b.type} ${drag?.over === b.id ? 'drop' : ''}`} onDragOver={e => { if (drag) { e.preventDefault(); setDrag(d => d.over === b.id ? d : { ...d, over: b.id }); } }} onDrop={e => { e.preventDefault(); if (drag && drag.id !== b.id) edit(list => { const moving = list.find(x => x.id === drag.id), rest = list.filter(x => x.id !== drag.id); rest.splice(rest.findIndex(x => x.id === b.id), 0, moving); return rest; }); setDrag(null); }}>
+  <div {...board.rootProps} onKeyDown={history.onKeyDown} className="page-blocks flow-root" role="document" aria-label="Page content">{ctx.element}{choosing && createPortal(<PickOverlay title={`Select a ${PICKS.find(p => p[0] === choosing.what)[1].toLowerCase()}`} items={pickItems(choosing.what)} onPick={item => { const at = choosing.id; setChoosing(null); embedAt(at, item.refType, item.refId); }} onClose={() => setChoosing(null)}/>, document.body)}{emoji && <EmojiPopup x={emoji.x} y={emoji.y} onClose={() => setEmoji(null)} onPick={i => { const cur = blocks.find(x => x.id === emoji.id); if (cur) { patch(cur.id, { text: cur.text.slice(0, emoji.at) + i + cur.text.slice(emoji.at) }); setFocus({ id: cur.id, caret: emoji.at + i.length }); } }}/>}{imagePicker.element}<ImageLayer board={board}/>{blocks.map((b, i) => <React.Fragment key={b.id}><FlowPush plan={board.plan[b.id]}/><div data-block-id={b.id} onContextMenu={e => blockContext(e, b)} data-flow={FLOW_TEXT.has(b.type) ? 'text' : 'solid'} data-ref={['embed', 'divider', 'metric'].includes(b.type) ? undefined : JSON.stringify({ type: 'block', blockId: b.id })} className={`block-row ${b.type} ${drag?.over === b.id ? 'drop' : ''}`} onDragOver={e => { if (drag) { e.preventDefault(); setDrag(d => d.over === b.id ? d : { ...d, over: b.id }); } }} onDrop={e => { e.preventDefault(); if (drag && drag.id !== b.id) edit(list => { const moving = list.find(x => x.id === drag.id), rest = list.filter(x => x.id !== drag.id); rest.splice(rest.findIndex(x => x.id === b.id), 0, moving); return rest; }); setDrag(null); }}>
     <div className="block-gutter"><button className="block-add" aria-label="Add a block below" title="Add a block" onClick={() => { const nb = block('p', '/'); insertAfter(b.id, [nb]); setFocus({ id: nb.id, end: true }); setMenu({ id: nb.id, query: '' }); setPick(0); }}><Plus size={14}/></button><span className="block-grip" draggable aria-label="Drag to reorder" title="Drag to reorder" onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDrag({ id: b.id }); }} onDragEnd={() => setDrag(null)}><GripVertical size={14}/></span><button className={`block-comment ${commentCounts[b.id] ? 'has' : ''}`} aria-label="Comment on this block" title="Comment" onClick={() => { setCommentsOpen(true); setCommentBlock(b.id); }}><CommentIcon size={13}/>{commentCounts[b.id] > 0 && <i>{commentCounts[b.id]}</i>}</button></div>
     <div className="block-body" style={b.indent ? { marginLeft: b.indent * 26 } : undefined}>{b.type === 'embed' ? renderEmbed(b) : b.type === 'divider' ? <hr/> : b.type === 'metric' ? <div className="metric-block"><input aria-label="Value label" className="metric-label" placeholder="Label" value={b.text} onChange={e => patch(b.id, { text: e.target.value })}/><strong className={`metric-value ${/^#/.test(evaluateExpression(project, b.body)) ? 'bad' : ''}`}>{evaluateExpression(project, b.body) || '—'}</strong><input aria-label="Value formula" className="metric-formula" placeholder="={{revenue}} / {{costs}}   or   {{name}} of {{total}}" value={b.body || ''} onChange={e => patch(b.id, { body: e.target.value })}/></div> : <>{b.type === 'bullet' && <span className="block-marker">•</span>}{b.type === 'numbered' && <span className="block-marker num">{numberOf(i)}.</span>}{b.type === 'toggle' && <button className={`block-toggle ${b.open ? 'open' : ''}`} aria-expanded={Boolean(b.open)} aria-label={b.open ? 'Collapse toggle' : 'Expand toggle'} onClick={() => patch(b.id, { open: !b.open })}><Chevron size={16}/></button>}{b.type === 'todo' && <button className="block-check" aria-label={b.checked ? 'Mark not done' : 'Mark done'} onClick={() => patch(b.id, { checked: !b.checked })}>{b.checked ? <CheckSquare size={16}/> : <Square size={16}/>}</button>}{b.type === 'callout' && <span className="block-marker callout-icon"><Lightbulb size={16}/></span>}
       {b.type === 'table' ? <TableBlock text={b.text} onChange={v => patch(b.id, { text: v })} onDelete={() => { remove(b.id); const near = blocks[i - 1] || blocks[i + 1]; if (near && !NO_TEXT.includes(near.type)) setFocus({ id: near.id, end: true }); }}/> : renderText(b, i)}{b.type === 'toggle' && b.open && <AutoText ariaLabel="Toggle content" className="block-text toggle-body" value={b.body || ''} placeholder="Empty toggle. Type inside." onChange={v => patch(b.id, { body: v })} onKeyDown={() => {}}/>}</>}
       {menu?.id === b.id && entries.length > 0 && <div className="slash-menu page-menu" role="listbox" aria-label="Insert a block">{entries.map((e, n) => <React.Fragment key={`${e.kind}-${e.type || e.what || e.refId || e.label}`}>{(n === 0 || entries[n - 1].group !== e.group) && <div className="slash-title">{e.group}</div>}<button type="button" role="option" aria-selected={n === pick} className={n === pick ? 'active' : ''} onMouseEnter={() => setPick(n)} onMouseDown={ev => { ev.preventDefault(); run(e, b.id); }}><e.Icon size={15}/><span>{e.label}</span><small>{e.hint}</small></button></React.Fragment>)}</div>}
     </div></div></React.Fragment>)}
     <button className="page-add" onClick={() => { const nb = block(); edit(list => [...list, nb]); setFocus({ id: nb.id }); }}><Plus size={14}/>Add a block</button></div>{commentsOpen && <CommentsPanel title="Page comments" comments={comments} blocks={blocks} block={commentBlock} onShowAll={() => setCommentBlock(null)} onClose={() => { setCommentsOpen(false); setCommentBlock(null); }} actions={commentActions}/>}</div>;
+}
+
+// A list of things that already exist in the project, to choose one from.
+function PickOverlay({ title, items, onPick, onClose }) {
+  const [query, setQuery] = useState(''), shown = items.filter(i => !query || i.label.toLowerCase().includes(query.toLowerCase()));
+  return <Modal title={title} onClose={onClose}>
+    {items.length > 6 && <input className="pick-search" autoFocus aria-label="Search" placeholder="Search" value={query} onChange={e => setQuery(e.target.value)}/>}
+    <div className="board-pick">{shown.map(i => <button key={i.refType + i.refId} type="button" onClick={() => onPick(i)}><span className="document-icon blue"><i.Icon size={16}/></span><strong>{i.label}</strong><small>{i.hint}</small></button>)}</div>
+    {!shown.length && <p className="board-pick-empty">Nothing here matches.</p>}
+  </Modal>;
 }

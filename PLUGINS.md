@@ -31,7 +31,7 @@ Install `plugin-examples/project-dice/` for a small working SDK example. It is n
 }
 ```
 
-Use module scripts, relative imports, CSS and JSON. Three.js (`three`, `three/addons/...`) and Phaser (`phaser`) are bundled in the host and can be imported directly. Other browser libraries or emulator code can be included as ordinary local source files, within the package limits. Binary images, audio, fonts and model assets are converted to data URLs during installation. Include only assets/code/ROMs you have the right to use. Plugins can render games, character models, maps and custom controls within their panels; this version does not expose unrestricted Node/Electron access or replace arbitrary host UI internals.
+Use module scripts, relative imports, CSS and JSON. Three.js (`three`, `three/addons/...`), Phaser (`phaser`) and React (`react`, `react-dom`) are bundled in the host and can be imported directly. Other browser libraries or emulator code can be included as ordinary local source files, within the package limits. Binary images, audio, fonts and model assets are converted to data URLs during installation. Include only assets/code/ROMs you have the right to use. Plugins can render games, character models, maps and custom controls within their panels; this version does not expose unrestricted Node/Electron access or replace arbitrary host UI internals.
 
 Package a folder using the repository's Node runtime:
 
@@ -40,6 +40,76 @@ node scripts/package-plugin.cjs plugin-examples/project-dice project-dice.zip
 ```
 
 The folder and ZIP paths use the same validation: 128 files including the manifest, 2 MB per file, 12 MB source/assets total; ZIP input is capped at 16 MB. ZIP CRCs, duplicate case-insensitive paths, traversal, encryption and symbolic links are checked. A package must compile before its install review appears. Updating preserves plugin settings/state and asks you to review the new permission list. Plugin installation and cookie sessions are device-local and must be repeated on another PC.
+
+## Adding to the app
+
+Besides panels, a plugin can add to features the app already has. Declare what it adds under `contributes` (`boards`, `fileEditors`, `sheetFunctions`, `themes`, `browser`); a plugin with contributions needs no panel. Each contribution is a page the plugin ships, run in the same sandbox as a panel and given the same `window.workspacePlugin`.
+
+```json
+{
+  "apiVersion": 1,
+  "id": "pdf-pen",
+  "name": "PDF pen",
+  "version": "1.0.0",
+  "permissions": ["files:read", "files:edit"],
+  "contributes": {
+    "boards": [
+      { "id": "sankey", "name": "Flow diagram", "hint": "Where things go", "group": "science", "entry": "sankey.html" }
+    ],
+    "fileEditors": [
+      { "id": "pen", "name": "PDF pen", "extensions": ["pdf"], "entry": "pen.html" }
+    ]
+  },
+  "panels": []
+}
+```
+
+**Board types** appear in the New menu of Boards, in a page's `/` menu and on the canvas, under the group you name (`basic`, `stats`, `business`, `science` or `other`). The board's data comes from the picker the app already has, so it can draw a spreadsheet range or a document table. Inside the page:
+
+```js
+const { title, state, table } = await sdk.board.get(); // table: { rows, label, error }
+await sdk.board.set({ zoom: 2 });                       // your own saved state, up to 200 KB
+sdk.onChange(() => { /* the table changed; call board.get() again */ });
+```
+
+**File editors** add an Edit button to the viewer of files with those extensions, and open the page in place of the viewer until you press Done. They need `files:read` and `files:edit`.
+
+```js
+const { id, name } = await sdk.file.get();    // the file being edited
+const { base64 } = await sdk.files.read(id);
+await sdk.files.update(id, newBase64);        // replaces the file's contents, up to 12 MB
+```
+
+`files:edit` is shown in the install review because it lets a plugin change files that already exist.
+
+**Spreadsheet functions** are formulas defined by an expression over named arguments, so they run inside the sheet and need no code or permission. Names are capitals; the built-in functions always win.
+
+```json
+"sheetFunctions": [{ "name": "MARKUP", "args": ["price", "pct"], "expr": "price*(1+pct/100)", "hint": "Price plus a percentage" }]
+```
+
+`=MARKUP(200, 10)` gives `220`. Expressions can use the same maths as function plots (`sqrt`, `log`, `if(a,b,c)`, `pi` and so on) and only the names listed in `args`.
+
+**Themes** lay colours over the light or dark base they name. They show up next to Light and Dark under Settings, Appearance. Values are plain colours and lengths; URLs are refused.
+
+```json
+"themes": [{ "id": "dusk", "name": "Dusk", "mode": "dark", "vars": { "--accent": "#7c5cff", "--bg": "#14121c" } }]
+```
+
+**Browser changes** restyle, block, script and add buttons to the research browser. Each needs a permission you review at install: `browser:modify` for styles and blocks, `browser:scripts` for scripts and tools. `matches` lists the websites a change applies to (`"*"` or patterns like `"https://*.example.com/*"`; the default is every site). Give `css` or `code` inline, or point `file` at a file in the package; each is up to 20 KB.
+
+```json
+"browser": {
+  "styles":  [{ "id": "night", "name": "Night pages", "matches": ["https://*.example.com/*"], "css": "body{background:#14121c!important}" }],
+  "scripts": [{ "id": "tidy", "name": "Hide banners", "code": "document.querySelector('.banner')?.remove()" }],
+  "blocks":  ["*://ads.example.net/*"],
+  "tools":   [{ "id": "count", "name": "Count words", "icon": "Search", "code": "document.body.innerText.split(/\s+/).length + ' words'" }]
+}
+```
+
+Styles and scripts run when a page finishes loading. Blocks stop matching requests before they are sent. A tool becomes a button in the browser's address bar row; it runs on the open page and shows what its code returns under the page.
+
+The statistics, business and science charts are ordinary plugins of this kind, kept in `bundled-plugins/chart-*` and installed from Plugins, Discover. Their code lives only in those folders: with a plugin off, none of it runs, and boards made with it show a note in place of the chart until you turn it back on. Each board entry can carry a `sample` (starting CSV for a new board). Plugin pages can import `react` and `react-dom` as well as `three` and `phaser`, and `.mjs`, `.jsx` and `.css` files.
 
 ## Browser SDK
 
@@ -61,8 +131,11 @@ The host binds calls to the displayed plugin, panel and selected project. A plug
 | `project:read` | `project()` — selected project notes, description and KPIs |
 | `files:read` | `files.list()`, `files.read(id)` — `{name,base64}`, up to 12 MB |
 | `files:write` | `files.save(name,base64)` — adds a project file, up to 12 MB through the SDK |
+| `files:edit` | `files.update(id,base64)` — replaces an existing project file, up to 12 MB |
 | `database:read` | `db.schema()`, `db.query(sql,params)` — existing read-only SQL limits apply |
 | `database:write` | `db.create(name,properties)`, `db.write({op,table,rowId,values})` — typed Boards operations |
+| `browser:modify` | styles and request blocks in the research browser (see Adding to the app) |
+| `browser:scripts` | scripts and toolbar tools that run on web pages in the research browser |
 | `agents:read` | `agents.list()`, `agents.messages()` — assigned public profiles and this project's conversation messages |
 | `agents:run` | `agents.send(agentId,text,chatId)` — runs an assigned agent and consumes its configured provider allowance |
 

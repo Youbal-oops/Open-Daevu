@@ -86,7 +86,7 @@ export function cleanImages(images, limit = 60) {
   return images.map(i => {
     if (!i || !/^[a-zA-Z0-9-]+$/.test(i.id || '') || seen.has(i.id)) throw new Error('Invalid picture.');
     seen.add(i.id);
-    const source = /^[a-zA-Z0-9-]+$/.test(i.fileId || '') ? { fileId: i.fileId } : typeof i.src === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(i.src) && i.src.length <= 1500000 ? { src: i.src } : null;
+    const source = /^[a-zA-Z0-9-]+$/.test(i.chartId || '') ? { chartId: i.chartId } : /^[a-zA-Z0-9-]+$/.test(i.fileId || '') ? { fileId: i.fileId } : typeof i.src === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(i.src) && i.src.length <= 1500000 ? { src: i.src } : null;
     if (!source) throw new Error('A picture needs a stored file.');
     return { id: i.id, ...source, name: String(i.name || '').slice(0, 160), x: num(i.x, 0, 20000, 0), y: num(i.y, 0, 400000, 0), w: num(i.w, 24, 6000, 240), h: num(i.h, 24, 6000, 160), wrap: IMAGE_WRAPS.includes(i.wrap) ? i.wrap : 'around' };
   });
