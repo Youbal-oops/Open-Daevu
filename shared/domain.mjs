@@ -2,7 +2,7 @@ import {cliFailure} from './agent-status.mjs';
 import { PLUGIN_ICONS } from './workspace-plugins.mjs';
 import { calculateSheet, address } from './sheet.mjs';
 import {validateApp} from './app-project.mjs';
-import { cleanBlocks, blocksToMarkdown, markdownToBlocks } from './blocks.mjs';
+import { cleanBlocks, cleanImages, blocksToMarkdown, markdownToBlocks } from './blocks.mjs';
 import { validateEvent, addDays as calendarAddDays, parseKey as calendarParseKey, dateKey as calendarDateKey } from './calendar.mjs';
 const randomUUID = () => globalThis.crypto.randomUUID();
 const id = () => randomUUID();
@@ -178,13 +178,13 @@ function validateProject(projects, value, before) {
   if (!Array.isArray(value.kpis) || value.kpis.length > 20 || value.kpis.some(k => !/^[a-zA-Z0-9-]+$/.test(k.id) || !k.label?.trim() || String(k.label).length > 120 || String(k.value ?? '').length > 120 || String(k.target ?? '').length > 120 || String(k.formula ?? '').length > 500)) throw new Error('Keep up to 20 named KPIs with short values and targets.');
 }
 const SHAPES = ['rect', 'roundrect', 'ellipse', 'diamond', 'hexagon', 'parallelogram', 'triangle', 'arrow'];
-const CANVAS_TYPES = ['sticky', 'text', ...SHAPES, 'frame', 'artifact', 'draw', 'diagram', 'link'];
+const CANVAS_TYPES = ['sticky', 'text', ...SHAPES, 'frame', 'artifact', 'draw', 'diagram', 'link', 'image'];
 const DIAGRAM_INNER = ['sticky', 'text', ...SHAPES];
 const ARTIFACT_KINDS = ['kanban', 'bar', 'line', 'pie', 'html', 'database'];
 const DB_PROPERTY_TYPES = ['title', 'text', 'number', 'select', 'date', 'checkbox'];
 const DB_VIEW_TYPES = ['table', 'board', 'gallery'];
 const PAGE_COVERS = ['', 'sage', 'sky', 'sand', 'rose', 'slate', 'violet'];
-const BLOCK_TYPES = ['h1', 'h2', 'h3', 'p', 'bullet', 'numbered', 'todo', 'toggle', 'quote', 'callout', 'code', 'metric', 'divider', 'embed'];
+const BLOCK_TYPES = ['h1', 'h2', 'h3', 'p', 'bullet', 'numbered', 'todo', 'toggle', 'quote', 'callout', 'code', 'table', 'metric', 'divider', 'embed'];
 const HOME_VIEWS = ['overview', 'page', 'canvas'];
 function validateAvatar(value) {
   if (value == null || value === '') return;
@@ -365,10 +365,11 @@ function cleanAnnotations(value) {
 function saveNoteRecord(prev, raw) {
   const incoming = { ...raw }; delete incoming.history; delete incoming.comments;
   if (incoming.format != null && !['markdown', 'blocks'].includes(incoming.format)) throw new Error('Invalid document format.');
-  if (incoming.kind === 'sheet') { delete incoming.blocks; delete incoming.format; }
-  else if (incoming.format === 'blocks') { incoming.blocks = cleanBlocks(incoming.blocks); incoming.content = blocksToMarkdown(incoming.blocks); }
-  else { delete incoming.blocks; delete incoming.format; }
+  if (incoming.kind === 'sheet') { delete incoming.blocks; delete incoming.format; delete incoming.images; }
+  else if (incoming.format === 'blocks') { incoming.blocks = cleanBlocks(incoming.blocks); incoming.content = blocksToMarkdown(incoming.blocks); if (incoming.images !== undefined) { incoming.images = cleanImages(incoming.images); if (!incoming.images.length) delete incoming.images; } }
+  else { delete incoming.blocks; delete incoming.format; delete incoming.images; }
   if (prev?.comments?.length) incoming.comments = prev.comments;
+  if (incoming.format === 'blocks' && incoming.images === undefined && prev?.images?.length) incoming.images = prev.images;
   if (prev) {
     const history = [...(prev.history || [])], changed = prev.content !== incoming.content || prev.title !== incoming.title;
     if (changed && typeof prev.content === 'string' && prev.content.length <= 200000 && (!history[0] || Date.now() - Date.parse(history[0].taken) >= 5 * 60 * 1000)) history.unshift({ at: prev.updatedAt || new Date().toISOString(), taken: new Date().toISOString(), title: prev.title, content: prev.content });
@@ -489,10 +490,11 @@ function applyMutation(state, action) {
       if (!Array.isArray(blocks) || blocks.length > 2000) throw new Error('A page can hold up to 2,000 blocks.');
       const cover = action.value.cover ?? project.page?.cover ?? '', icon = String(action.value.icon ?? project.page?.icon ?? '').slice(0, 8);
       if (!PAGE_COVERS.includes(cover)) throw new Error('Choose a supported page cover.');
-      project.page = { icon, cover, blocks: blocks.map(b => {
+      const images = action.value.images === undefined ? project.page?.images || [] : cleanImages(action.value.images);
+      project.page = { icon, cover, ...(images.length ? { images } : {}), blocks: blocks.map(b => {
         if (!/^[a-zA-Z0-9-]+$/.test(b.id || '') || !BLOCK_TYPES.includes(b.type)) throw new Error('Invalid page block.');
         if (b.type === 'embed' && (!['note', 'artifact', 'file', 'folder'].includes(b.refType) || !/^[a-zA-Z0-9-]+$/.test(b.refId || ''))) throw new Error('Invalid embedded item.');
-        return { id: b.id, type: b.type, text: String(b.text || '').slice(0, 20000), ...(b.type === 'todo' ? { checked: Boolean(b.checked) } : {}), ...(b.type === 'toggle' ? { body: String(b.body || '').slice(0, 20000), open: Boolean(b.open) } : {}), ...(b.type === 'metric' ? { body: String(b.body || '').slice(0, 2000) } : {}), ...(b.type === 'embed' ? { refType: b.refType, refId: b.refId } : {}) };
+        return { id: b.id, type: b.type, text: String(b.text || '').slice(0, 20000), ...(b.type === 'todo' ? { checked: Boolean(b.checked) } : {}), ...(['bullet', 'numbered', 'todo'].includes(b.type) && Math.round(Number(b.indent)) > 0 ? { indent: Math.min(3, Math.round(Number(b.indent))) } : {}), ...(b.type === 'toggle' ? { body: String(b.body || '').slice(0, 20000), open: Boolean(b.open) } : {}), ...(b.type === 'metric' ? { body: String(b.body || '').slice(0, 2000) } : {}), ...(b.type === 'embed' ? { refType: b.refType, refId: b.refId } : {}) };
       }), ...(project.page?.comments?.length ? { comments: project.page.comments } : {}), updatedAt: new Date().toISOString() };
       break;
     }

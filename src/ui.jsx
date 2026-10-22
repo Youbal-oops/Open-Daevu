@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { fixMarkdown } from '../shared/markdown-fix.mjs';
 import { X, FileText, ArrowUpRight, Camera, Trash2, User } from 'lucide-react';
 import { api } from './api';
 
@@ -19,8 +21,8 @@ export function UserAvatar({ settings, small = false }) {
 }
 export function IconButton({ icon: Icon, label, onClick, ...props }) { return <button type="button" className="icon-button" aria-label={label} title={label} onClick={onClick} {...props}><Icon size={17}/></button>; }
 export function Markdown({ children, onDoc }) {
-  const text = onDoc ? (children || '').replace(/\[\[([^\[\]\n]{1,120})\]\]/g, (_, title) => `[${title}](rwdoc:${encodeURIComponent(title.trim())})`) : children || '';
-  return <ReactMarkdown urlTransform={url => url.startsWith('rwdoc:') ? url : defaultUrlTransform(url)} components={{ a: ({ href, children }) => href?.startsWith('rwdoc:') ? <a className="doc-link" href="#" onClick={e => { e.preventDefault(); onDoc?.(decodeURIComponent(href.slice(6))); }}>{children}</a> : <a href={href} onClick={e => { e.preventDefault(); if (href) api.openURL(href); }}>{children}<ArrowUpRight size={12}/></a> }}>{text}</ReactMarkdown>;
+  const text = fixMarkdown(onDoc ? (children || '').replace(/\[\[([^\[\]\n]{1,120})\]\]/g, (_, title) => `[${title}](rwdoc:${encodeURIComponent(title.trim())})`) : children || '');
+  return <ReactMarkdown remarkPlugins={[remarkGfm]} urlTransform={url => url.startsWith('rwdoc:') ? url : defaultUrlTransform(url)} components={{ table: ({ children }) => <div className="md-table"><table>{children}</table></div>, a: ({ href, children }) => href?.startsWith('rwdoc:') ? <a className="doc-link" href="#" onClick={e => { e.preventDefault(); onDoc?.(decodeURIComponent(href.slice(6))); }}>{children}</a> : <a href={href} onClick={e => { e.preventDefault(); if (href) api.openURL(href); }}>{children}<ArrowUpRight size={12}/></a> }}>{text}</ReactMarkdown>;
 }
 export function Modal({ title, subtitle, children, onClose, wide }) {
   const root = useRef(null), close = useRef(onClose); close.current = onClose;

@@ -2,13 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { applyEdgeChanges, ReactFlow, ReactFlowProvider, BackgroundVariant, useStore, useReactFlow, Background, Panel, BaseEdge, MiniMap, Handle, Position, NodeResizer, ConnectionMode, MarkerType, addEdge, applyNodeChanges } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { MousePointer2, Hand, StickyNote, Type, Square, Circle, Diamond, Frame, FileText, Table2, Kanban, Upload, Paperclip, ArrowUpRight, Maximize2, Minimize2, Trash2, Copy, Network, Plus, Palette, PenLine, LayoutGrid, Shapes, Hexagon, Triangle, ArrowRightFromLine, RectangleHorizontal, Spline, Sparkles, MoveRight, CornerDownRight, Undo2, Redo2, Maximize, Minus, Map as MapIcon, MoreVertical, ArrowLeft, Check, LayoutTemplate, Link2, Wand2, AlignLeft } from 'lucide-react';
+import { Image as ImageIcon, MousePointer2, Hand, StickyNote, Type, Square, Circle, Diamond, Frame, FileText, Table2, Kanban, Upload, Paperclip, ArrowUpRight, Maximize2, Minimize2, Trash2, Copy, Network, Plus, Palette, PenLine, LayoutGrid, Shapes, Hexagon, Triangle, ArrowRightFromLine, RectangleHorizontal, Spline, Sparkles, MoveRight, CornerDownRight, Undo2, Redo2, Maximize, Minus, Map as MapIcon, MoreVertical, ArrowLeft, Check, LayoutTemplate, Link2, Wand2, AlignLeft } from 'lucide-react';
 import { FormatPanel, EdgePanel } from './canvas-format';
 import { recognizeShape } from '../shared/shape-recognize.mjs';
 import { TEMPLATES, buildTemplate } from '../shared/canvas-templates.mjs';
 import { csvParse, csvStringify } from '../shared/domain.mjs';
 import { calculateSheet, columnName } from '../shared/sheet.mjs';
 import { uid, now, date, excerpt, Markdown } from './ui';
+import { ingestFiles, usePicture, IMAGE_TYPES } from './float-images';
 import { ArtifactPreview, KINDS, kindIcon, newArtifact } from './boards';
 import { useContextMenu, copyText } from './context-menu';
 import { api } from './api';
@@ -115,6 +116,13 @@ function FileNode({ data }) {
   const far = useFar(), f = data.item, picture = IMAGE_FILE.test(f.name) && data.pid;
   if (far) return <LodIcon Icon={Paperclip}/>;
   return <div className={`board-card ${picture ? 'image-card' : ''}`} onContextMenu={e => data.h.current.menu(e, 'file', f)} onDoubleClick={() => data.h.current.openFile(f.id)}><Handles/><div className="board-card-header"><Paperclip size={15}/><span>{picture ? 'IMAGE' : 'ATTACHMENT'}</span><button className="nodrag" aria-label={`Open ${f.name}`} onClick={() => data.h.current.openFile(f.id)}><ArrowUpRight size={15}/></button></div>{picture && <ImageThumb pid={data.pid} id={f.id} name={f.name}/>}<h3>{f.name}</h3><p>{(f.size / 1024).toFixed(1)} KB · Stored locally</p><div className="board-card-bottom"><span>{picture ? 'Image' : 'Attachment'}</span><span>{date(f.createdAt)}</span></div></div>;
+}
+function PictureNode({ id, data, selected }) {
+  const item = data.item, { url, failed } = usePicture(data.pid, { fileId: item.refId });
+  return <div className={`canvas-picture${item.lock ? ' locked' : ''}${failed ? ' failed' : ''}`} onContextMenu={e => data.h.current.menu(e, 'shape', item)}>
+    <NodeResizer isVisible={selected && !item.lock} minWidth={56} minHeight={40} keepAspectRatio onResizeEnd={(_, p) => data.h.current.resized(id, p)}/><Handles/>
+    {url ? <img src={url} alt={item.text || ''} draggable={false}/> : <div className="canvas-picture-empty">{failed ? 'Picture not found' : ''}</div>}
+  </div>;
 }
 function LinkNode({ id, data, selected }) {
   const item = data.item;
@@ -297,7 +305,7 @@ function ConnectMenu({ at, onPick, onClose }) {
 function DiagramEditor(props) { return <ReactFlowProvider><DiagramEditorInner {...props}/></ReactFlowProvider>; }
 // Nodes only repaint when their own data or selection changes, so dragging or saving one item doesn't redraw the whole board.
 const memoNode = C => React.memo(C, (a, b) => a.data === b.data && a.selected === b.selected && a.id === b.id);
-const nodeTypes = { draw: memoNode(DrawNode), shape: memoNode(ShapeNode), note: memoNode(NoteNode), file: memoNode(FileNode), artifact: memoNode(ArtifactNode), diagram: memoNode(DiagramNode), link: memoNode(LinkNode) };
+const nodeTypes = { draw: memoNode(DrawNode), shape: memoNode(ShapeNode), note: memoNode(NoteNode), file: memoNode(FileNode), artifact: memoNode(ArtifactNode), diagram: memoNode(DiagramNode), link: memoNode(LinkNode), picture: memoNode(PictureNode) };
 
 
 function CanvasInner({ project, onOpen, onFile, onOpenArtifact, act, onImport, onAsk, controls, theme=document.documentElement.dataset.theme||'light' }) {
@@ -404,7 +412,7 @@ function CanvasInner({ project, onOpen, onFile, onOpenArtifact, act, onImport, o
   // Packs cards, stickies, shapes, and boards into tidy rows so nothing overlaps. Frames stay where you put them.
   const tidy = (silent = false) => {
     const cardSize = n => isEmbedded(n) ? (n.size || docSize(n)) : { w: 260, h: 170 };
-    const entries = [...project.notes.map(n => ({ id: n.id, ...cardSize(n) })), ...project.files.map(f => ({ id: f.id, w: 260, h: 170 })), ...(project.canvas || []).filter(c => c.type !== 'frame').map(c => ({ id: c.id, w: c.size.w, h: c.size.h }))];
+    const entries = [...project.notes.map(n => ({ id: n.id, ...cardSize(n) })), ...project.files.filter(f => !f.inline).map(f => ({ id: f.id, w: 260, h: 170 })), ...(project.canvas || []).filter(c => c.type !== 'frame').map(c => ({ id: c.id, w: c.size.w, h: c.size.h }))];
     if (!entries.length) return;
     const maxWidth = 1500, gap = 36, positions = [];
     let x = 80, y = 80, rowHeight = 0;
@@ -415,8 +423,8 @@ function CanvasInner({ project, onOpen, onFile, onOpenArtifact, act, onImport, o
   const tidied = useRef(false);
   useEffect(() => {
     if (tidied.current) return; tidied.current = true;
-    const seen = new Set(); let stacked = project.files.some(f => !f.position);
-    for (const item of [...project.notes, ...project.files]) { const key = item.position ? `${Math.round(item.position.x)},${Math.round(item.position.y)}` : 'none'; if (seen.has(key)) stacked = true; seen.add(key); }
+    const seen = new Set(); let stacked = project.files.some(f => !f.inline && !f.position);
+    for (const item of [...project.notes, ...project.files.filter(f => !f.inline)]) { const key = item.position ? `${Math.round(item.position.x)},${Math.round(item.position.y)}` : 'none'; if (seen.has(key)) stacked = true; seen.add(key); }
     if (stacked) tidy(true);
   }, []);
   // Each node's data object is reused while its content is unchanged, so memoized nodes skip repainting.
@@ -426,15 +434,15 @@ function CanvasInner({ project, onOpen, onFile, onOpenArtifact, act, onImport, o
     const itemData = c => {
       const pending = optimistic.current.get(c.id);
       if (pending) { if (JSON.stringify(pending.item) === JSON.stringify(c) || Date.now() - pending.at > 4000) optimistic.current.delete(c.id); else c = pending.item; }
-      return stable(c.id, JSON.stringify(c), () => ({ item: c, h: handlers }));
+      return stable(c.id, JSON.stringify(c), () => ({ item: c, h: handlers, pid: project.id }));
     };
     for (const c of items.filter(c => c.type === 'frame')) list.push({ id: c.id, type: 'shape', position: c.position, width: c.size.w, height: c.size.h, zIndex: -1, draggable: !c.lock, data: itemData(c) });
     for (const n of project.notes) list.push({ id: n.id, type: 'note', position: n.position || { x: 80, y: 90 }, ...(isEmbedded(n) ? { width: (n.size || docSize(n)).w, height: (n.size || docSize(n)).h } : {}), data: stable(n.id, [n.updatedAt, n.title, n.embed, n.kind, n.author, n.content?.length, n.size?.w, n.size?.h].join('|'), () => ({ item: n, h: handlers })) });
-    for (const f of project.files) list.push({ id: f.id, type: 'file', position: f.position || { x: 400, y: 90 }, data: stable(f.id, [f.name, f.size, f.createdAt].join('|'), () => ({ item: f, h: handlers, pid: project.id })) });
+    for (const f of project.files) if (!f.inline) list.push({ id: f.id, type: 'file', position: f.position || { x: 400, y: 90 }, data: stable(f.id, [f.name, f.size, f.createdAt].join('|'), () => ({ item: f, h: handlers, pid: project.id })) });
     for (const c of items.filter(c => c.type !== 'frame')) {
       if (c.type === 'draw' || c.type === 'diagram') list.push({ id: c.id, type: c.type, position: c.position, width: c.size.w, height: c.size.h, ...canvasProps(c), data: itemData(c) });
       else if (c.type === 'artifact') { const a = (project.artifacts || []).find(x => x.id === c.refId); if (a) list.push({ id: c.id, type: 'artifact', position: c.position, width: c.size.w, height: c.size.h, data: stable(c.id, [a.kind === 'html' ? [a.id, a.updatedAt, a.title, a.data?.html?.length].join('|') : JSON.stringify(a), stamp].join('#'), () => ({ artifact: a, project, h: handlers })) }); }
-      else list.push({ id: c.id, type: c.type === 'link' ? 'link' : 'shape', position: c.position, width: c.size.w, height: c.size.h, ...canvasProps(c), data: itemData(c) });
+      else list.push({ id: c.id, type: c.type === 'link' ? 'link' : c.type === 'image' ? 'picture' : 'shape', position: c.position, width: c.size.w, height: c.size.h, ...canvasProps(c), data: itemData(c) });
     }
     // Lock and stacking follow the version of each block that is on screen, including unsaved changes.
     for (const n of list) { const it = n.data?.item; if (it?.type && it.size) { n.draggable = !it.lock; if (it.type !== 'frame') { if (it.z) n.zIndex = it.z; else delete n.zIndex; } } }
@@ -452,6 +460,22 @@ function CanvasInner({ project, onOpen, onFile, onOpenArtifact, act, onImport, o
   }, [project.notes, project.files, project.canvas, project.artifacts]);
   useEffect(() => { const key = e => { if (diagramOpen.current || e.target.closest?.('input,textarea,select,[contenteditable]')) return; if ((e.ctrlKey || e.metaKey) && ['z', 'y'].includes(e.key.toLowerCase())) { e.preventDefault(); (e.key.toLowerCase() === 'y' || e.shiftKey ? historyApi.current.redo : historyApi.current.undo)(); return; } const k = { v: 'select', h: 'hand', p: 'pen', s: 'sticky', t: 'text', f: 'frame' }[e.key.toLowerCase()]; if (k && !e.ctrlKey && !e.metaKey && !e.altKey) setTool(k); if (e.key === 'Escape') { setTool('select'); setMenu(''); } if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) mindRef.current?.(e); }; window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key); }, []);
   const center = () => { const r = area.current.getBoundingClientRect(); return flow.screenToFlowPosition({ x: r.left + r.width / 2, y: r.top + r.height / 2 }); };
+  const [notice, setNotice] = useState(''), pictureInput = useRef(null);
+  useEffect(() => { if (!notice) return; const t = setTimeout(() => setNotice(''), 4500); return () => clearTimeout(t); }, [notice]);
+  // Pictures from a paste, a drop or the picker land on the canvas as blocks you can move and resize freely.
+  async function addPictures(files, at) {
+    try {
+      if (!window.workspace) throw new Error('Pictures on the canvas need the desktop app.');
+      const made = await ingestFiles(project.id, files);
+      if (!made.length) return false;
+      const spot = at || center(), items = made.map((m, n) => { const w = Math.round(Math.min(380, m.width)), h = Math.round(w * m.height / m.width); return { id: uid(), type: 'image', text: m.name || '', color: 'gray', refId: m.fileId, position: { x: Math.round(spot.x - w / 2 + n * 28), y: Math.round(spot.y - h / 2 + n * 28) }, size: { w, h } }; });
+      remember();
+      await act({ type: 'canvas:items', projectId: project.id, value: { items } });
+      setTimeout(() => setNodes(ns => ns.map(n => ({ ...n, selected: n.id === items.at(-1).id }))), 150);
+      return true;
+    } catch (error) { setNotice(error.message || 'Could not add that picture.'); return true; }
+  }
+  const picturesRef = useRef(null); picturesRef.current = addPictures;
   function place(type, at) {
     const d = SHAPE_DEFAULTS[type], item = { id: uid(), type, text: type === 'frame' ? 'Frame' : '', color: d.color, position: { x: at.x - d.w / 2, y: at.y - d.h / 2 }, size: { w: d.w, h: d.h } };
     handlers.current.saveItem(item);
@@ -466,7 +490,7 @@ function CanvasInner({ project, onOpen, onFile, onOpenArtifact, act, onImport, o
   const onSelection = useCallback(({ nodes: ns }) => { const nodeIds = ns.map(n => n.id); setSelected(old => sameIds(old, nodeIds) ? old : nodeIds); }, []);
   const restyleEdges = type => { const next = edges.map(e => selectedEdges.includes(e.id) ? { ...e, type } : e); setEdges(next); board({ edges: next }); };
   // Read from the nodes, which update at once, so quick successive changes build on each other instead of the last saved copy.
-  const shapes = nodes.filter(n => selected.includes(n.id) && n.data?.item?.size && n.data.item.type && !['artifact', 'diagram'].includes(n.data.item.type) && (project.canvas || []).some(c => c.id === n.id)).map(n => n.data.item);
+  const shapes = nodes.filter(n => selected.includes(n.id) && n.data?.item?.size && n.data.item.type && !['artifact', 'diagram', 'image'].includes(n.data.item.type) && (project.canvas || []).some(c => c.id === n.id)).map(n => n.data.item);
   const canvasIds = new Set((project.canvas || []).map(c => c.id));
   const removable = selected.filter(id => canvasIds.has(id));
   // Writes a change to several blocks as one step, so a single undo puts them all back.
@@ -497,7 +521,7 @@ function CanvasInner({ project, onOpen, onFile, onOpenArtifact, act, onImport, o
   // Tab on one selected block adds a connected branch, like a mind map.
   mindRef.current = e => {
     const picked = (project.canvas || []).filter(c => selected.includes(c.id));
-    if (picked.length !== 1 || selected.length !== 1 || ['frame', 'draw', 'artifact', 'diagram', 'link'].includes(picked[0].type)) return;
+    if (picked.length !== 1 || selected.length !== 1 || ['frame', 'draw', 'artifact', 'diagram', 'link', 'image'].includes(picked[0].type)) return;
     e.preventDefault();
     const parent = picked[0], kids = edges.filter(x => x.source === parent.id).length, size = { w: Math.min(parent.size.w, 190), h: Math.min(parent.size.h, 90) };
     const child = { id: uid(), type: parent.type === 'sticky' ? 'sticky' : 'roundrect', text: '', color: parent.color, position: { x: Math.round(parent.position.x + parent.size.w + 90), y: Math.round(parent.position.y + kids * (size.h + 24)) }, size };
@@ -507,6 +531,8 @@ function CanvasInner({ project, onOpen, onFile, onOpenArtifact, act, onImport, o
   useEffect(() => {
     const paste = e => {
       if (diagramOpen.current || e.target.closest?.('input, textarea, select, [contenteditable]') || !area.current?.offsetParent) return;
+      const pictures = [...(e.clipboardData?.files || [])].filter(f => /^image\//.test(f.type));
+      if (pictures.length) { e.preventDefault(); picturesRef.current?.(pictures); return; }
       const text = (e.clipboardData?.getData('text/plain') || '').trim();
       if (/^https?:\/\/\S+$/i.test(text) && linkRef.current?.(text)) e.preventDefault();
     };
@@ -544,9 +570,9 @@ function CanvasInner({ project, onOpen, onFile, onOpenArtifact, act, onImport, o
   const edgeColor=theme==='dark'?'#ffffff':'#1a1a1a';
   const displayEdges = useMemo(() => edges.map(edge => edgeLook(edge, edgeColor, theme === 'dark')), [edges, edgeColor, theme]);
   return <div className="canvas-view freeform">{ctx.element}<div className="canvas-toolbar"><div><span className="canvas-badge"><Network size={15}/>Project canvas</span><span className="canvas-hint">Diagram sheets, notes, documents, spreadsheets, and boards.</span></div><div><button data-ai className="button secondary small-button" onClick={() => onAsk?.('Draw a flowchart on the canvas for: ')}><Sparkles size={14}/>Ask AI to diagram</button><button className="button secondary small-button" onClick={() => tidy()}><LayoutGrid size={14}/>Tidy up</button><button className="button secondary small-button" onClick={onImport}><Upload size={14}/>Add files</button>{controls}</div></div>
-    <div className="flow-area" ref={area} data-tool={tool}>
+    <div className="flow-area" ref={area} data-tool={tool} onDragOver={e => { if ([...(e.dataTransfer?.types || [])].includes('Files')) e.preventDefault(); }} onDrop={e => { const files = [...(e.dataTransfer?.files || [])].filter(f => /^image\//.test(f.type)); if (!files.length) return; e.preventDefault(); picturesRef.current?.(files, flow.screenToFlowPosition({ x: e.clientX, y: e.clientY })); }}>{notice && <div className="canvas-notice" role="status">{notice}</div>}<input ref={pictureInput} type="file" accept={IMAGE_TYPES} multiple hidden aria-label="Choose pictures" onChange={e => { addPictures(e.target.files); e.target.value = ''; }}/>
       <div className="canvas-palette" role="toolbar" aria-label="Canvas tools" aria-orientation="vertical">{tools.map(([id, Icon, label]) => <button key={id} aria-label={label} title={label} className={tool === id ? 'active' : ''} aria-pressed={tool === id} onClick={() => setTool(id)}><Icon size={17}/></button>)}<button aria-label="New diagram sheet" title="Diagram sheet: shapes and connectors" onClick={newDiagram}><Shapes size={17}/></button><span className="palette-sep"/>
-        <button aria-label="New document on canvas" title="New document" onClick={() => addNote('note')}><FileText size={17}/></button><button aria-label="New spreadsheet on canvas" title="New spreadsheet" onClick={() => addNote('sheet')}><Table2 size={17}/></button>
+        <button aria-label="Add a picture" title="Add a picture (or paste / drop one)" onClick={() => pictureInput.current?.click()}><ImageIcon size={17}/></button><button aria-label="New document on canvas" title="New document" onClick={() => addNote('note')}><FileText size={17}/></button><button aria-label="New spreadsheet on canvas" title="New spreadsheet" onClick={() => addNote('sheet')}><Table2 size={17}/></button>
         <div className="popover-anchor"><button aria-label="Add a board or chart" title="Kanban or chart" className={menu === 'boards' ? 'active' : ''} onClick={() => setMenu(menu === 'boards' ? '' : 'boards')}><Kanban size={17}/></button>{menu === 'boards' && <div className="popover palette-menu"><div className="tool-group-label">New</div>{KINDS.map(([kind, label, Icon]) => <button key={kind} onClick={() => placeArtifact(newArtifact(kind), true)}><Icon size={14}/>{label}</button>)}{(project.artifacts || []).length > 0 && <><div className="tool-group-label">Existing</div>{project.artifacts.map(a => { const Icon = kindIcon(a.kind); return <button key={a.id} onClick={() => placeArtifact(a, false)}><Icon size={14}/>{a.title}</button>; })}</>}</div>}</div><div className="popover-anchor"><button aria-label="Templates" title="Templates, mind map and timeline" className={menu === 'templates' ? 'active' : ''} onClick={() => setMenu(menu === 'templates' ? '' : 'templates')}><LayoutTemplate size={17}/></button>{menu === 'templates' && <div className="popover palette-menu"><div className="tool-group-label">Start from</div>{TEMPLATES.map(t => <button key={t.id} title={t.hint} onClick={() => addTemplate(t.id)}>{t.name}</button>)}<button title="A spreadsheet with task columns" onClick={() => addNote('sheet', 'Task,Owner,Status,Due\n,,,')}>Table</button></div>}</div>
         <div className="popover-anchor"><button aria-label="Add a link" title="Link card (or just paste a web address)" className={menu === 'link' ? 'active' : ''} onClick={() => setMenu(menu === 'link' ? '' : 'link')}><Link2 size={17}/></button>{menu === 'link' && <form className="popover palette-menu link-form" onSubmit={e => { e.preventDefault(); addLinkFrom(linkUrl.trim()); }}><input autoFocus aria-label="Web address" placeholder="Paste a web address" value={linkUrl} onChange={e => setLinkUrl(e.target.value)}/><button className="button primary small-button">Add</button></form>}</div><span className="palette-sep"/><button aria-label="Undo (Ctrl+Z)" title="Undo (Ctrl+Z)" disabled={!hist.current.undo.length} onClick={() => historyApi.current.undo()}><Undo2 size={17}/></button><button aria-label="Redo (Ctrl+Shift+Z)" title="Redo (Ctrl+Shift+Z)" disabled={!hist.current.redo.length} onClick={() => historyApi.current.redo()}><Redo2 size={17}/></button></div>
       {tool === 'pen' && <><div className="canvas-context pen-colors" role="toolbar" aria-label="Pen color"><PenLine size={14}/>{COLORS.map(c => <button key={c} className={`swatch c-${c} ${penColor === c ? 'on' : ''}`} aria-label={`Pen ${c}`} aria-pressed={penColor === c} onClick={() => setPenColor(c)}/>)}<span className="palette-sep h"/><button aria-label="Smart shapes" aria-pressed={smart} title={smart ? 'Rough drawings become clean shapes (on)' : 'Turn rough drawings into clean shapes (off)'} className={smart ? 'on' : ''} onClick={toggleSmart}><Wand2 size={14}/></button></div><svg className={`pen-overlay c-${penColor}`} onPointerDown={penDown} onPointerMove={penMove} onPointerUp={penUp} onPointerCancel={() => setStroke(null)}>{stroke && <polyline points={stroke.screen.map(p => p.join(',')).join(' ')} fill="none" strokeLinecap="round" strokeLinejoin="round"/>}</svg></>}
