@@ -6,6 +6,7 @@ const nodeFs = require('node:fs');
 const { pathToFileURL } = require('node:url');
 const { BoardsDatabase } = require('./boards-db.cjs');
 const { Store } = require('./store.cjs');
+const { Updates } = require('./updates.cjs');
 const { toIcs, parseIcs } = require('../shared/calendar.mjs');
 const { Reminders } = require('./reminders.cjs');
 const { DeviceLock } = require('./device-lock.cjs');
@@ -209,7 +210,6 @@ app.whenReady().then(async () => {
   handle('plugins:prepare',async (kind,repository)=>{
     if(kind==='website'){if(!repository||typeof repository.name!=='string'||typeof repository.url!=='string')throw Error('Name the AI website and enter its URL.');return plugins.prepare({manifest:{apiVersion:1,id:'web-'+require('node:crypto').randomUUID().slice(0,8),name:repository.name,version:'1.0.0',description:'AI website panel',permissions:['web-chat','files:write','storage'],panels:[{id:'main',title:repository.name,type:'web-app',url:repository.url}]},files:{}});}
     if(kind==='builtin:browser-assistants')return plugins.prepare(path.join(__dirname,'../bundled-plugins/browser-assistants'));
-    if(kind==='builtin:typesafe-console')return plugins.prepare(path.join(__dirname,'../bundled-plugins/typesafe-console'));
     if(kind==='github')return plugins.prepare(await require('./plugin-github.cjs').githubPackage(repository));
     if(['builtin:chatgpt-web','builtin:gemini-web'].includes(kind))return plugins.prepare(path.join(__dirname,'../bundled-plugins',kind.slice(8)));
     if(!['folder','zip'].includes(kind))throw Error('Choose a folder or ZIP plugin package.');
@@ -283,6 +283,22 @@ app.whenReady().then(async () => {
     return events.length;
   });
   handle('app:quit', () => { setImmediate(() => app.quit()); });
+  const updates = new Updates({ version: app.getVersion(), fetch: (url, options) => net.fetch(url, options), userData: app.getPath('userData'), downloads: app.getPath('downloads'), portable: Boolean(process.env.PORTABLE_EXECUTABLE_DIR), onChange: state => send('update:state', state) });
+  handle('update:state', () => updates.state);
+  handle('update:check', () => updates.check({ manual: true }));
+  handle('update:skip', () => { updates.skip(); });
+  handle('update:download', async () => { await updates.download(); return updates.state; });
+  handle('update:page', () => { const page = updates.state.available?.page; if (/^https:\/\/github\.com\//.test(page || '')) return shell.openExternal(page); });
+  // A setup program is started and Daevu closes so it can be replaced; a portable copy is shown in its folder instead.
+  handle('update:install', async () => {
+    const file = updates.state.downloaded;
+    if (!file || !nodeFs.existsSync(file)) throw new Error('Download the update first.');
+    if (updates.portable) { shell.showItemInFolder(file); return; }
+    const failure = await shell.openPath(file);
+    if (failure) throw new Error(failure);
+    setTimeout(() => app.quit(), 1500);
+  });
+  if (app.isPackaged && !testData) { setTimeout(() => updates.check(), 8000); setInterval(() => updates.check(), 6 * 60 * 60 * 1000); }
   // Uninstall from inside the app: the choice about local data is left for the uninstaller to read, then the app steps aside.
   handle('app:uninstall', value => {
     const exe = path.join(path.dirname(process.execPath), `Uninstall ${app.getName()}.exe`);

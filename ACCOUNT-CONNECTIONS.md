@@ -83,6 +83,6 @@ To let an agent use Jev, open its profile’s **Jev decision tool**, select the 
 
 Jev is a structured decision model, not a source of free-form chat replies. The direct endpoint is `/v1/systemone`; OpenRouter uses `/api/v1/systemone`. See [TypeSafe’s API reference](https://docs.typesafe.ai/api), [TypeSafe model discovery](https://docs.typesafe.ai/models), and [Jev on OpenRouter](https://openrouter.ai/docs/guides/community/jev).
 
-For the normal TypeSafe console interface, install **TypeSafe console** from Plugins. The same **Add AI website** flow can host other HTTPS AI tools with their own controls and sign-ins. Embedded login depends on the website; use Open externally if its identity provider refuses an embedded session. Website access does not automatically grant an API key or an agent tool connection.
+For the normal TypeSafe console interface, use **Add AI website** under Plugins with its URL. The same flow can host other HTTPS AI tools with their own controls and sign-ins. Embedded login depends on the website; use Open externally if its identity provider refuses an embedded session. Website access does not automatically grant an API key or an agent tool connection.
 
 Validation uses mock responses and isolated local test accounts; no paid TypeSafe or OpenRouter request is made by the test suite.

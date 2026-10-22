@@ -9,5 +9,6 @@ Daevu is built on open-source packages. Nearly all use the MIT, ISC, BSD, Apache
 | `dompurify` | Apache-2.0 (offered as MPL-2.0 or Apache-2.0) | Used under Apache-2.0 |
 | `simple-icons` | CC0 1.0 | The icons are public domain. The brands they show are trademarks of their owners |
 | React, React Flow (`@xyflow/react`), Electron, Vite, Three.js, Phaser, Automerge, lucide-react and others | MIT / Apache-2.0 | See each package for its license text |
+| Pretext (`@chenglou/pretext`), used to lay text out around pictures, and remark-gfm, used for tables in chat | MIT | See each package for its license text |
 
 To list every package and its license: `npm ls --all` and read the `license` field in each `package.json`.

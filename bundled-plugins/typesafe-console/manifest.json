@@ -1,1 +1,0 @@
-{"apiVersion":1,"id":"typesafe-console","name":"TypeSafe console","version":"1.0.0","description":"Jev playground and TypeSafe developer console in a signed-in website panel.","author":"Daevu","permissions":["web-chat","files:write","storage"],"panels":[{"id":"console","title":"TypeSafe console","type":"web-app","url":"https://console.typesafe.ai/"}]}

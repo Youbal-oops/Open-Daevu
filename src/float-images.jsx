@@ -155,9 +155,15 @@ export function useFloatBoard({ projectId, images = [], onImages, signature = ''
   // Where a block came out taller or shorter than estimated, plan again from what the page drew.
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || live || !natural.current || !Object.keys(plan).length) return;
+    if (!root || live || !natural.current || !shownRef.current.length) return;
     const timer = setTimeout(() => {
       let changed = false;
+      // A block that cannot wrap must clear every picture; if the page left one on top of it, push it down by what is missing.
+      const pictures = [...root.querySelectorAll('.float-img')].filter(el => !el.classList.contains('wrap-over')).map(el => el.getBoundingClientRect());
+      for (const row of root.querySelectorAll('[data-flow=solid]')) {
+        const box = row.getBoundingClientRect(), id = row.dataset.blockId;
+        for (const p of pictures) if (box.bottom > p.top && box.top < p.bottom && box.height > 0 && (corrections.current[id] || 0) < 3000) { corrections.current[id] = (corrections.current[id] || 0) + Math.ceil(p.bottom + 14 - box.top); changed = true; break; }
+      }
       for (const [id, entry] of Object.entries(plan)) {
         if (!entry.height) continue;
         const row = root.querySelector(`[data-block-id="${CSS.escape(id)}"]`); if (!row) continue;
@@ -168,7 +174,7 @@ export function useFloatBoard({ projectId, images = [], onImages, signature = ''
       if (changed) replan();
     }, 140);
     return () => clearTimeout(timer);
-  }, [plan, live, replan]);
+  }, [plan, live, replan, signature]);
 
   const commit = useCallback(next => latest.current.onImages(next), []);
   const patch = useCallback((id, values) => commit(latest.current.images.map(i => i.id === id ? { ...i, ...values } : i)), [commit]);

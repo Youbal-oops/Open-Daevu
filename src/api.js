@@ -13,6 +13,7 @@ const preview = {
   mcpPolicy:desktopOnly,mcpAdd:desktopOnly,mcpRemove:desktopOnly,mcpTest:desktopOnly,mcpAnswer:desktopOnly,mcpSearch:desktopOnly,mcpSignIn:desktopOnly,mcpCancel:desktopOnly,async mcpPending(){return [];},onMcpApprovals(){return ()=>{};},
   async storageStatus() { return {mode:'local',path:'Browser preview',connected:false,readOnly:false}; },
   onStorage() { return () => {}; },
+  updateState: async () => null, updateCheck: async () => null, updateDownload: desktopOnly, updateInstall: desktopOnly, updateSkip: async () => {}, updatePage: async () => {}, onUpdate() { return () => {}; },
   async storagePrepare() { throw new Error('Drive folder connections require the desktop app and Google Drive for desktop.'); },
   storageShared:desktopOnly,storageConflicts:async()=>[],storageConflict:desktopOnly,storageResolve:desktopOnly,
   storageApply: desktopOnly, storageSchedules: desktopOnly, storageTakeover: desktopOnly, storageRestart: desktopOnly,

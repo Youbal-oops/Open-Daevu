@@ -749,3 +749,9 @@ textarea.iv-text.editing{background:rgba(0,0,0,.25);border-color:var(--accent);o
 .canvas-view.freeform .diagram-bar .button.primary:hover{background:#2e323b}
 .button.danger-fill{background:#e5484d;color:#fff}
 .settings-section .form-actions{display:flex;gap:8px;margin-top:10px}
+
+.update-banner{position:fixed;left:50%;bottom:22px;translate:-50% 0;z-index:900;display:flex;align-items:center;gap:16px;padding:11px 12px 11px 16px;border-radius:14px;background:var(--card);border:1px solid var(--border);box-shadow:0 18px 50px #0007;max-width:min(520px,calc(100vw - 32px))}
+.update-text{display:grid;gap:3px;min-width:0}.update-text strong{font-size:13px}.update-text small{color:var(--muted);font-size:11.5px}
+.update-actions{display:flex;align-items:center;gap:4px;flex:none}
+.update-bar{height:4px;border-radius:4px;background:var(--hover);overflow:hidden;margin-top:4px}.update-bar i{display:block;height:100%;background:var(--accent);transition:width .2s}
+.update-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;font-size:12px;color:var(--muted)}

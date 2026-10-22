@@ -1,7 +1,10 @@
 import React, { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { MessageSquare, Plus, GripVertical, Check, ImagePlus } from 'lucide-react';
+import { MessageSquare, Plus, GripVertical, Check, ImagePlus, Undo2, Redo2 } from 'lucide-react';
 import { uid } from './ui';
 import { listNumbers } from '../shared/blocks.mjs';
+import { useHistory, changedBlock } from './history';
+import { useContextMenu } from './context-menu';
+import { blockMenuItems, EmojiPopup } from './block-menu';
 import { TableBlock, TABLE_TEMPLATE } from './table-block';
 import { useFloatBoard, useImagePicker, ImageLayer, FlowSlot, FlowPush } from './float-images';
 import { inlineToHtml, inlineToPlain, treeToInline, escapeHtml } from '../shared/inline.mjs';
@@ -96,7 +99,7 @@ const BlockText = props => props.block.type === 'code' ? <CodeText {...props}/> 
 
 const Row = memo(function Row({ b, num, focus, count, menu, pick, over, flow, api }) {
   const entries = menu ? matches(menu.query) : [];
-  return <div className={`doc-block ${b.type}${over ? ' drop' : ''}`} data-block-id={b.id} data-flow={FLOWS.has(b.type) ? 'text' : 'solid'}
+  return <div className={`doc-block ${b.type}${over ? ' drop' : ''}`} data-block-id={b.id} onContextMenu={e => api.current.context(e, b)} data-flow={FLOWS.has(b.type) ? 'text' : 'solid'}
     onDragOver={e => { if (api.current.dragging()) { e.preventDefault(); api.current.over(b.id); } }} onDrop={e => { e.preventDefault(); api.current.drop(b.id); }}>
     <div className="doc-gutter">
       <button className="doc-add" aria-label="Add a block below" title="Add a block" onClick={() => api.current.addBelow(b.id)}><Plus size={14}/></button>
@@ -126,8 +129,26 @@ export function BlockDoc({ blocks, onChange, commentCounts = {}, onComment, imag
   const patch = (id, values) => commit(list => list.map(b => b.id === id ? { ...b, ...values } : b));
   const insertAfter = (id, items) => commit(list => { const at = list.findIndex(b => b.id === id); return [...list.slice(0, at + 1), ...items, ...list.slice(at + 1)]; });
 
+  const doc = useMemo(() => ({ blocks, images }), [blocks, images]);
+  const history = useHistory(doc, (next, before) => { if (onImages && JSON.stringify(next.images || []) !== JSON.stringify(before.images || [])) onImages(next.images || []); onChange(next.blocks); const id = changedBlock(before, next); if (id) focusOn(id, 'end'); }, board.rootRef);
+
+  const ctx = useContextMenu(), [emojiAt, setEmojiAt] = useState(null);
+
   api.current = {
     patch,
+    // Right-click on a line of text: emoji where the caret was, change the block's kind, duplicate or delete it.
+    context(e, b) {
+      if (['divider', 'table', 'code'].includes(b.type)) return;
+      const el = e.target.closest('.doc-text'), sel = window.getSelection(), range = el && sel.rangeCount && el.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+      ctx.open(e, blockMenuItems({ block: b, x: e.clientX, y: e.clientY, onEmoji: (x, y) => setEmojiAt({ x, y, id: b.id, range }), onTurn: type => api.current.convert(b.id, type), onDuplicate: () => insertAfter(b.id, [{ ...b, id: uid() }]), onDelete: () => api.current.removeBlock(b.id) }));
+    },
+    insertEmoji({ id, range }, emoji) {
+      const el = document.querySelector(`[data-block-id="${id}"] .doc-text`), sel = window.getSelection();
+      if (!el) return;
+      el.focus(); sel.removeAllRanges();
+      if (range) sel.addRange(range); else { sel.selectAllChildren(el); sel.collapseToEnd(); }
+      document.execCommand('insertText', false, emoji);
+    },
     type(b, value) {
       const hit = b.type !== 'code' && SHORTCUTS.find(([re]) => re.test(value));
       if (hit) { patch(b.id, { type: hit[1], text: '', ...(hit[1] === 'todo' ? { checked: false } : {}) }); focusOn(b.id, 'start'); setMenu(null); return; }
@@ -195,7 +216,9 @@ export function BlockDoc({ blocks, onChange, commentCounts = {}, onComment, imag
   };
 
   const numbers = useMemo(() => listNumbers(blocks), [blocks]);
-  return <div {...board.rootProps} className="doc-blocks flow-root" role="document" aria-label="Document blocks">
+  return <div {...board.rootProps} onKeyDown={history.onKeyDown} className="doc-blocks flow-root" role="document" aria-label="Document blocks">
+    <div className="doc-undo"><button type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={history.undo}><Undo2 size={15}/></button><button type="button" aria-label="Redo" title="Redo (Ctrl+Y)" disabled={!history.canRedo} onClick={history.redo}><Redo2 size={15}/></button></div>
+    {ctx.element}{emojiAt && <EmojiPopup x={emojiAt.x} y={emojiAt.y} onClose={() => setEmojiAt(null)} onPick={i => api.current.insertEmoji(emojiAt, i)}/>}
     {picker.element}
     {onImages && <ImageLayer board={board}/>}
     {blocks.map((b, at) => {

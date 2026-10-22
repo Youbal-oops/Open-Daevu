@@ -68,6 +68,7 @@ export function planFlow(blocks, images, columnWidth, corrections = {}) {
         again = false;
         for (const image of active) if (top + push < image.y + image.h + GAP && end + push > image.y - GAP) { const next = image.y + image.h + GAP - top; if (next > push + 0.5) { push = next; again = true; } }
       }
+      push += corrections[block.id] || 0;
       if (push > 0) { plan[block.id] = { push: Math.round(push), floats: [] }; shift += push; }
       continue;
     }

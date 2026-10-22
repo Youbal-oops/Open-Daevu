@@ -68,6 +68,8 @@ Give each specialist a name, a role and a model. Use your ChatGPT, Gemini or Cla
 - **Connections** reach the public MCP registry, with the logo of every service.
 - **Your tab bar** keeps the tools you reach for in each project: browser, calendar, database, whiteboard.
 - **Pages** are made of blocks, with comments and deep links. Images open with a marker, text and crop. Copy and paste keeps your formatting.
+- **Pictures** can be pasted, dropped or imported into pages, documents and the canvas, then moved anywhere and resized from the corners. On pages and documents the text runs around them. Choose wrap, break or in front from the bar above a selected picture.
+- **Your layout** is yours: drag the grip on the project list or the chat to the other edge, or pull its inner edge to make it wider. Tables, nested lists and bold text that an agent writes show up as they were meant to.
 
 ## Quick start
 

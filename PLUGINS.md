@@ -85,7 +85,7 @@ Open **Plugins → Install from GitHub**, paste a public `https://github.com/own
 
 ## Other AI websites
 
-**Add AI website** creates a `web-app` panel from a name and an HTTPS URL, then shows the same plugin permission review. **TypeSafe console** is an optional ready-made website plugin using this same format. Web apps retain their own UI and separate device-local browser sessions; they do not use the shared ChatGPT/Gemini composer. Their downloads can be saved into the selected project. Normal API connections and agent access are configured independently in Connections.
+**Add AI website** creates a `web-app` panel from a name and an HTTPS URL, then shows the same plugin permission review. Web apps retain their own UI and separate device-local browser sessions; they do not use the shared ChatGPT/Gemini composer. Their downloads can be saved into the selected project. Normal API connections and agent access are configured independently in Connections.
 
 A website panel uses `{"id":"main","title":"My AI tool","type":"web-app","url":"https://console.example.com/"}` in the manifest’s `panels` array and requires the `web-chat` permission. Add `files:write` to save downloads. It runs in a sandboxed native browser with no Node or workspace bridge.
 
