@@ -41,3 +41,19 @@ test('a spreadsheet exports to xlsx with formulas and values, and imports back t
   const ods = temp('plan.ods'); writeNote(note, ods, {});
   assert.equal(importFile(ods, { x: 0, y: 0 }).content, note.content);
 });
+
+test('sheet names that collide in Excel are made unique and formulas follow the renamed sheet', () => {
+  const long = 'Quarterly figures for the whole company';
+  const note = noteFromSheets('Names', [
+    { name: long + ' one', rows: [['v'], ['5']] },
+    { name: long + ' two', rows: [['=\'' + long + ' one\'!A2*2']] },
+    { name: 'Q1/Q2', rows: [['1']] },
+    { name: 'Q1-Q2', rows: [['=\'Q1/Q2\'!A1+1']] }
+  ], { x: 0, y: 0 });
+  const file = temp('names.xlsx'); writeNote(note, file, {});
+  const wb = XLSX.readFile(file), names = wb.SheetNames;
+  assert.equal(new Set(names.map(n => n.toLowerCase())).size, 4, 'every sheet got its own name');
+  assert.ok(names.every(n => n.length <= 31));
+  assert.equal(wb.Sheets[names[1]].A1.f, `'${names[0]}'!A2*2`, 'the formula points at the exported name');
+  assert.equal(wb.Sheets[names[3]].A1.f, `'${names[2]}'!A1+1`, 'a name that was just written is not renamed again');
+});

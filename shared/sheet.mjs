@@ -9,6 +9,7 @@ export function address(ref) { const m = /^\$?([A-Z]+)\$?([1-9]\d*)$/i.exec(ref)
 // ---- Values. Cells hold text; a formula result is a number, text, or true/false. Dates are written 2026-10-22.
 const DAY = 86400000, ISO = /^(\d{4})-(\d{2})-(\d{2})(?:[T ][\d:.]+Z?)?$/;
 const serialOf = (y, m, d) => Math.round((Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / DAY);
+const localStamp = d => { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 const isoOf = serial => { const d = new Date(Date.UTC(1899, 11, 30) + Math.round(serial) * DAY); return d.toISOString().slice(0, 10); };
 const asDate = value => { const m = typeof value === 'string' ? ISO.exec(value.trim()) : null; return m ? serialOf(+m[1], +m[2], +m[3]) : null; };
 const num = value => {
@@ -96,13 +97,13 @@ export function calculateSheet(rows, context = {}) {
     const raw = String(grids.get(grid)?.[y]?.[x] ?? '');
     if (!raw.startsWith('=')) return raw;
     visiting.add(key);
-    try { const result = parse(raw.slice(1), depth, grid); if (typeof result === 'number' && !Number.isFinite(result)) throw Error('#NUM!'); if (result instanceof Range) throw Error('#VALUE!'); cache.set(key, result); return result; }
+    try { const result = parse(raw.slice(1), depth, grid, [y, x]); if (typeof result === 'number' && !Number.isFinite(result)) throw Error('#NUM!'); if (result instanceof Range) throw Error('#VALUE!'); cache.set(key, result); return result; }
     finally { visiting.delete(key); }
   }
-  function parse(source, depth, home) {
+  function parse(source, depth, home, at = [0, 0]) {
     if (source.length > 4000) throw Error('#LIMIT!');
     const tokens = []; let pos = 0;
-    const pattern = /\s*(?:(\d*\.?\d+(?:[eE][+-]?\d+)?)|("(?:[^"]|"")*")|(?:('?)\[([^\]]+)\]((?:[^'!]|'')*)\3!)|('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_.]*)!|(\$?[A-Za-z]+\$?[1-9]\d*|[A-Za-z_][A-Za-z0-9_.]*)|(<>|<=|>=|[+\-*/^%=<>&(),:;])|(#REF!))/y;
+    const pattern = /\s*(?:(\d*\.?\d+(?:[eE][+-]?\d+)?)|("(?:[^"]|"")*")|(?:('?)\[([^\]]+)\]((?:[^'!]|'')*)\3!)|('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_.]*)!|(\$?[A-Za-z]+\$?[1-9]\d*(?![A-Za-z0-9_.(])|[A-Za-z_][A-Za-z0-9_.]*)|(<>|<=|>=|[+\-*/^%=<>&(),:;])|(#REF!))/y;
     while (pos < source.length) {
       if (!source.slice(pos).trim()) break;
       pattern.lastIndex = pos; const m = pattern.exec(source); if (!m) throw Error('#ERROR!');
@@ -124,22 +125,22 @@ export function calculateSheet(rows, context = {}) {
         const grid = gridOf(t.sheet, t.file, home), first = take();
         if (isRef(first)) {
           const a = address(first);
-          if (peek() === ':') { take(); node = rangeNode(grid, a, address(take())); } else node = () => cell(grid, a[0], a[1], depth + 1);
+          if (peek() === ':') { take(); const b = address(take()); node = rangeNode(grid, a, b); node.ref = [Math.min(a[0], b[0]), Math.min(a[1], b[1])]; } else { node = () => cell(grid, a[0], a[1], depth + 1); node.ref = a; }
         } else if (isCol(first) && peek() === ':') { take(); const second = take(), last = Math.max(0, (grids.get(grid)?.length || 1) - 1); node = rangeNode(grid, [0, columnIndex(first.replace(/\$/g, ''))], [last, columnIndex(String(second).replace(/\$/g, ''))]); }
         else throw Error('#REF!');
       }
       else if (t && typeof t === 'object') node = () => t.n ?? t.s;
       else if (t === '+' || t === '-') { const a = primary(level + 1); node = () => (t === '-' ? -1 : 1) * num(a()); }
       else if (t === '(') { node = expression(0, level + 1); need(')'); }
-      else if (isRef(t)) {
+      else if (isRef(t) && peek() !== '(') {
         const a = address(t);
-        if (peek() === ':') { take(); node = rangeNode(home, a, address(take())); } else node = () => cell(home, a[0], a[1], depth + 1);
+        if (peek() === ':') { take(); const b = address(take()); node = rangeNode(home, a, b); node.ref = [Math.min(a[0], b[0]), Math.min(a[1], b[1])]; } else { node = () => cell(home, a[0], a[1], depth + 1); node.ref = a; }
       } else if (isCol(t) && peek() === ':' && isCol(tokens[i + 1])) { take(); const second = take(), last = Math.max(0, (grids.get(home)?.length || 1) - 1); node = rangeNode(home, [0, columnIndex(t.replace(/\$/g, ''))], [last, columnIndex(second.replace(/\$/g, ''))]); }
       else if (t === '#REF!') node = () => { throw Error('#REF!'); };
       else if (t === 'TRUE' || t === 'FALSE') { if (peek() === '(') { take(); need(')'); } node = () => t === 'TRUE'; }
       else if (typeof t === 'string' && peek() === '(') {
         take(); const args = []; if (peek() !== ')') { do { args.push(expression(0, level + 1)); if (peek() !== ',' && peek() !== ';') break; take(); } while (true); } need(')');
-        node = () => call(t, args, home);
+        node = () => call(t, args, home, at);
       } else throw Error('#ERROR!');
       while (peek() === '%') { take(); const previous = node; node = () => num(previous()) / 100; }
       return node;
@@ -183,7 +184,7 @@ export function calculateSheet(rows, context = {}) {
     if (exact) return list.findIndex(v => looseEqual(v, key) && !(v === '' && key !== ''));
     let best = -1; for (let k = 0; k < list.length; k++) { if (list[k] === '' ) continue; if (compare(list[k], key) <= 0) best = k; else break; } return best;
   }
-  function call(name, args, home) {
+  function call(name, args, home, at = [0, 0]) {
     const lazy = { IF: 1, IFERROR: 1, IFNA: 1, IFS: 1, SWITCH: 1, CHOOSE: 1 };
     if (name === 'IF') { if (args.length < 2 || args.length > 3) throw Error('#VALUE!'); return truth(args[0]()) ? args[1]() : args[2]?.() ?? false; }
     if (name === 'IFERROR' || name === 'IFNA') { if (args.length !== 2) throw Error('#VALUE!'); try { return args[0](); } catch (e) { if (name === 'IFNA' && e.message !== '#N/A') throw e; return args[1](); } }
@@ -192,7 +193,7 @@ export function calculateSheet(rows, context = {}) {
     if (name === 'CHOOSE') { if (args.length < 2) throw Error('#VALUE!'); const k = Math.trunc(num(args[0]())); if (k < 1 || k >= args.length) throw Error('#VALUE!'); return args[k](); }
     if (name === 'AND' || name === 'OR' || name === 'XOR') { const v = flat(args.map(a => a())).filter(x => x !== '' && x != null).map(truth); if (!v.length) throw Error('#VALUE!'); return name === 'AND' ? v.every(Boolean) : name === 'OR' ? v.some(Boolean) : v.filter(Boolean).length % 2 === 1; }
     if (name === 'ISERROR' || name === 'ISNA') { try { args[0](); return false; } catch (e) { return name === 'ISERROR' || e.message === '#N/A'; } }
-    if (name === 'ROW' || name === 'COLUMN') return 0;
+    if (name === 'ROW' || name === 'COLUMN') { const k = name === 'ROW' ? 0 : 1; if (!args.length) return at[k] + 1; if (args.length > 1 || !args[0].ref) throw Error('#VALUE!'); return args[0].ref[k] + 1; }
     const v = args.map(f => f());
     switch (name) {
       case 'SUM': return sum(numbers(v));
@@ -269,8 +270,8 @@ export function calculateSheet(rows, context = {}) {
       case 'INDEX': { need(v, 2, 3); const r = range(v[0]); let row = Math.trunc(num(v[1])), col = v[2] === undefined ? 1 : Math.trunc(num(v[2])); if (v[2] === undefined && r.height === 1) { col = row; row = 1; } if (row < 1 || col < 1 || row > r.height || col > r.width) throw Error('#REF!'); return r.rows[row - 1][col - 1]; }
       case 'ROWS': need(v, 1); return range(v[0]).height;
       case 'COLUMNS': need(v, 1); return range(v[0]).width;
-      case 'TODAY': return new Date().toISOString().slice(0, 10);
-      case 'NOW': return new Date().toISOString().slice(0, 16).replace('T', ' ');
+      case 'TODAY': return localStamp(new Date()).slice(0, 10);
+      case 'NOW': return localStamp(new Date()).slice(0, 16);
       case 'DATE': { need(v, 3); const t = new Date(Date.UTC(num(v[0]), num(v[1]) - 1, num(v[2]))); return t.toISOString().slice(0, 10); }
       case 'YEAR': need(v, 1); return dateParts(v[0]).y;
       case 'MONTH': need(v, 1); return dateParts(v[0]).m;

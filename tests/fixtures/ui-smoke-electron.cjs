@@ -185,8 +185,8 @@ app.once('browser-window-created', (_event, window) => {
       wc.send('deeplink', { project: 'research-project' });
       await wait("!!document.querySelector('.tab-strip button[role=tab][aria-label=\"Files\"]')", 'project tabs');
       await run("document.querySelector('.tab-strip button[role=tab][aria-label=\"Files\"]').click()");
-      await wait("[...document.querySelectorAll('.file-table button')].some(b => /Photo\\.png/.test(b.textContent))", 'uploaded file listed');
-      await run("[...document.querySelectorAll('.file-table button')].find(b => /Photo\\.png/.test(b.textContent)).click()");
+      await wait("[...document.querySelectorAll('.files-grid button')].some(b => /Photo\\.png/.test(b.textContent))", 'uploaded file listed');
+      await run("[...document.querySelectorAll('.files-grid button')].find(b => /Photo\\.png/.test(b.textContent)).click()");
       await wait("!!document.querySelector('.image-viewer .iv-canvas img') && document.querySelector('.iv-canvas img').complete && document.querySelector('.iv-canvas img').naturalWidth === 120", 'the image opens inside the app');
       assert.ok(await run("[...document.querySelectorAll('.tab-strip [role=tab]')].some(t => /Photo\\.png/.test(t.textContent))"), 'the image has its own tab');
       const press = (type, x, y) => `document.querySelector('.iv-canvas img').dispatchEvent(new PointerEvent('${type}', { bubbles: true, clientX: ${x}, clientY: ${y}, button: 0, buttons: ${type === 'pointerup' ? 0 : 1}, pointerId: 7 }))`;
@@ -387,7 +387,7 @@ app.once('browser-window-created', (_event, window) => {
       // A diagram sheet: its lines are dark on the light page and can be clicked to restyle.
       const sheetId = 'sheet-check', pid = await run("window.workspace.load().then(s => s.selectedProject)");
       const inner = (id, x, text) => ({ id, type: 'rect', text, color: 'white', position: { x, y: 40 }, size: { w: 140, h: 70 } });
-      await run(`window.workspace.mutate({ type: 'canvas:item', projectId: ${JSON.stringify(pid)}, value: ${JSON.stringify({ id: sheetId, type: 'diagram', text: 'Check sheet', color: 'white', position: { x: 2400, y: 2400 }, size: { w: 520, h: 340 }, nodes: [inner('d1', 0, 'One'), inner('d2', 320, 'Two')], edges: [{ id: 'de1', source: 'd1', target: 'd2', type: 'default' }] })} })`);
+      await run(`window.workspace.mutate({ type: 'canvas:item', projectId: ${JSON.stringify(pid)}, value: ${JSON.stringify({ id: sheetId, type: 'diagram', text: 'Check sheet', color: 'white', position: { x: 300, y: 560 }, size: { w: 520, h: 340 }, nodes: [inner('d1', 0, 'One'), inner('d2', 320, 'Two')], edges: [{ id: 'de1', source: 'd1', target: 'd2', type: 'default' }] })} })`);
       await wait(`!!document.querySelector('#workspace-canvas-shelf .react-flow__node[data-id="${sheetId}"]')`, 'the diagram sheet is on the canvas');
       await run(`document.querySelector('#workspace-canvas-shelf .react-flow__node[data-id="${sheetId}"] [aria-label^="Open"]').click()`);
       await wait("!!document.querySelector('.diagram-editor .react-flow__edge path')", 'the diagram editor opens with its connector');

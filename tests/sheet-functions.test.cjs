@@ -107,3 +107,15 @@ test('formulas can reach other spreadsheets in the project', async () => {
   const out = await calc([["=[Q3 Budget]Costs!B2", "=[Q3 Budget]Totals!A2", "='[Q3 Budget]Costs'!B3", '=[Q3 Budget]!B2*2', '=[Missing]Costs!A1', '=SUM([Q3 Budget]Costs!B2:B3)']], context);
   assert.deepEqual(out[0], ['1200', 2401, 2400, 2400, '#REF!', 3600]);
 });
+
+test('names ending in digits are functions, ROW and COLUMN say where they are, and TODAY is local', async () => {
+  const { calculateSheet, setSheetFunctions } = await import('../shared/sheet.mjs');
+  const r = calculateSheet([['=LOG10(100)', '=ROW(A5)', '=COLUMN(C1)', '=ROW()', '=COLUMN()'], ['=ROW(B3:C9)', '=MOD(ROW(),2)', '=A1+1']]);
+  assert.deepEqual(r[0], [2, 5, 3, 1, 5]);
+  assert.deepEqual(r[1], [3, 0, 3]);
+  setSheetFunctions([{ name: 'VAT2', args: ['p'], expr: 'p*1.2' }]);
+  assert.equal(calculateSheet([['=VAT2(100)']])[0][0], 120);
+  setSheetFunctions([]);
+  const d = new Date(), p = n => String(n).padStart(2, '0'), local = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  assert.equal(calculateSheet([['=TODAY()']])[0][0], local);
+});
