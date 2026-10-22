@@ -349,7 +349,6 @@ function App() {
     </div>
     <McpApprovals onPendingChange={setMcpPending}/>
     <UpdateBanner update={updateState} onError={setToast}/>
-    <UpdateBanner update={updateState} onError={setToast}/>
     {toast && <div className="toast" role="status"><AlertCircle size={16}/>{toast}<IconButton icon={X} label="Dismiss notification" onClick={() => setToast('')}/></div>}
     {modal?.type === 'refs' && <ReferencesDialog project={project} act={act} setToast={setToast} onClose={() => setModal(null)}/>}
     {modal?.type === 'kpi' && <KpiDialog kpi={modal.kpi} project={project} onCopyRef={id => copyRef({ project, act, target: { type: 'kpi', kpiId: id }, setToast }).catch(err => setToast(err.message))} onClose={() => setModal(null)} onSave={async kpi => { await act({ type: 'project:update', projectId: project.id, value: { kpis: [...(project.kpis || []).filter(k => k.id !== kpi.id), kpi] } }); setModal(null); }} onDelete={async id => { await act({ type: 'project:update', projectId: project.id, value: { kpis: (project.kpis || []).filter(k => k.id !== id) } }); setModal(null); }}/> }

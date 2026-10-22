@@ -50,3 +50,16 @@ test('the installer downloads to a file and its size is checked', async () => {
   await assert.rejects(() => short.updates.download(), /cut short/);
   assert.equal(fs.readdirSync(path.join(short.dir, 'dl')).length, 0, 'no partial file is left');
 });
+
+test('a download is forgotten when a newer release appears, and kept for the same one', async () => {
+  let tag = 'v1.0.2';
+  const fetch = async url => url.includes('api.github') ? json(release(tag)) : { ok: true, status: 200, headers: { get: () => '5' }, body: (async function* () { yield Buffer.from('abcde'); })() };
+  const { updates } = make('1.0.1', fetch);
+  await updates.check(); await updates.download();
+  assert.ok(updates.state.downloaded);
+  assert.ok((await updates.check()).downloaded, 'the same release keeps its download');
+  tag = 'v1.0.3';
+  const next = await updates.check();
+  assert.equal(next.available.version, '1.0.3');
+  assert.equal(next.downloaded, null, 'the older installer is not offered for the newer release');
+});

@@ -90,3 +90,10 @@ test('chart plugins ship no code in the app: the app has none of their chart typ
  const kinds=await fs.readFile(path.resolve(__dirname,'../src/chart-kinds.js'),'utf8');
  for(const word of ['scatter','histogram','waterfall','funnel','heatmap','radar'])assert.ok(!kinds.includes("'"+word+"'"),word+' should live in its plugin');
 });
+test('removing the last picture from a document sticks, and leaving pictures out keeps them', async () => {
+ const {saveNoteRecord}=await import('../shared/domain.mjs');
+ const note={id:'n1',title:'T',kind:'note',format:'blocks',content:'',blocks:[{id:'b',type:'p',text:'x'}],images:[{id:'i1',src:'data:image/png;base64,AAAA',x:0,y:0,w:50,h:50}],author:'You',createdAt:'2026-01-01',updatedAt:'2026-01-01'};
+ assert.equal(saveNoteRecord(note,{...note,images:[]}).images,undefined);
+ const {images,...withoutPictures}=note;
+ assert.equal(saveNoteRecord(note,withoutPictures).images.length,1);
+});

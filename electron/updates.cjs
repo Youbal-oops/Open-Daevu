@@ -38,7 +38,11 @@ class Updates {
       const asset = pickAsset(release.assets, this.portable);
       const newer = compareVersions(tag, this.version) > 0 && asset;
       const skipped = !manual && this.prefs.skipped === tag;
-      this.set({ checking: false, available: newer && !skipped ? { version: tag.replace(/^v/i, ''), notes: String(release.body || '').slice(0, 4000), page: String(release.html_url || ''), name: asset.name, size: asset.size || 0, url: asset.browser_download_url } : null });
+      const available = newer && !skipped ? { version: tag.replace(/^v/i, ''), notes: String(release.body || '').slice(0, 4000), page: String(release.html_url || ''), name: asset.name, size: asset.size || 0, url: asset.browser_download_url } : null;
+      // A download only counts for the release it came from; a newer release has to be downloaded again.
+      const kept = available && this.downloadedVersion === available.version ? this.state.downloaded : null;
+      if (!kept) this.downloadedVersion = null;
+      this.set({ checking: false, available, downloaded: kept });
     } catch (error) { this.set({ checking: false, error: manual ? error.message : '' }); }
     return this.state;
   }
@@ -58,6 +62,7 @@ class Updates {
       await new Promise((resolve, reject) => { out.end(error => error ? reject(error) : resolve()); });
       if (update.size && done !== update.size) throw new Error('The download was cut short. Try again.');
       fs.renameSync(partial, target);
+      this.downloadedVersion = update.version;
       this.set({ progress: null, downloaded: target });
       return target;
     } catch (error) { try { fs.rmSync(partial, { force: true }); } catch {} this.set({ progress: null, error: error.message }); throw error; }

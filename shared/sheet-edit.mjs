@@ -17,3 +17,9 @@ export function putCells(rows,top,left,block){
 // Quoted formula strings are text, not references. Absolute row/column markers stay fixed.
 export function shiftFormula(source,dy,dx){if(!source.startsWith('='))return source;return source.split(/("(?:[^"]|"")*")/g).map((part,i)=>i%2?part:part.replace(/(?<![A-Za-z0-9_])(\$?)([A-Z]+)(\$?)([1-9]\d*)(?![A-Za-z0-9_])/gi,(ref,c,col,r,row)=>{const [y,x]=address(col+row),ny=y+(r?0:dy),nx=x+(c?0:dx);return ny<0||nx<0||ny>=SHEET_ROWS||nx>=SHEET_COLUMNS?'#REF!':c+columnName(nx)+r+(ny+1);})).join('');}
 export function fillDown(rows,range){const block=[];for(let y=range.top+1;y<=range.bottom;y++)block.push(Array.from({length:range.right-range.left+1},(_,offset)=>shiftFormula(String(rows[range.top]?.[range.left+offset]??''),y-range.top,0)));return putCells(rows,range.top+1,range.left,block);}
+
+// With a filter on, a selection only covers the rows the filter shows. `order` lists those rows; null means no filter.
+export function shownRows(range,order){const all=[];for(let r=range.top;r<=range.bottom;r++)all.push(r);if(!order)return all;const keep=new Set(order);return all.filter(r=>keep.has(r));}
+export function clearShown(rows,range,order){const width=range.right-range.left+1;let next=rows;for(const r of shownRows(range,order))next=putCells(next,r,range.left,[Array(width).fill('')]);return next;}
+export function fillShown(rows,range,order){const filled=fillDown(rows,range);if(!order)return filled;const keep=new Set(shownRows(range,order));return filled.map((row,r)=>r>range.top&&r<=range.bottom&&!keep.has(r)?(rows[r]||row):row);}
+export function copyShown(rows,range,order){if(!order)return clipboardText(rows,range);const shown=shownRows(range,order);return clipboardText(shown.map(r=>rows[r]||[]),{top:0,bottom:shown.length-1,left:range.left,right:range.right});}

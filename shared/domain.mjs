@@ -372,7 +372,8 @@ function saveNoteRecord(prev, raw) {
   else if (incoming.format === 'blocks') { incoming.blocks = cleanBlocks(incoming.blocks); incoming.content = blocksToMarkdown(incoming.blocks); if (incoming.images !== undefined) { incoming.images = cleanImages(incoming.images); if (!incoming.images.length) delete incoming.images; } }
   else { delete incoming.blocks; delete incoming.format; delete incoming.images; }
   if (prev?.comments?.length) incoming.comments = prev.comments;
-  if (incoming.format === 'blocks' && incoming.images === undefined && prev?.images?.length) incoming.images = prev.images;
+  // Pictures not sent at all are kept; an empty list sent on purpose removes them.
+  if (incoming.format === 'blocks' && raw.images === undefined && prev?.images?.length) incoming.images = prev.images;
   if (prev) {
     const history = [...(prev.history || [])], changed = prev.content !== incoming.content || prev.title !== incoming.title;
     if (changed && typeof prev.content === 'string' && prev.content.length <= 200000 && (!history[0] || Date.now() - Date.parse(history[0].taken) >= 5 * 60 * 1000)) history.unshift({ at: prev.updatedAt || new Date().toISOString(), taken: new Date().toISOString(), title: prev.title, content: prev.content });

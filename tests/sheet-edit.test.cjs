@@ -18,3 +18,13 @@ test('fill and copied formulas shift relative references and preserve absolute r
  const result=fillDown([['Value','Result'],['2','=A2*2'],['3',''],['4','']],bounds([1,1],[3,1]));assert.deepEqual(result.map(r=>r[1]),['Result','=A2*2','=A3*2','=A4*2']);assert.deepEqual(calculateSheet(result).map(r=>r[1]),['Result',4,6,8]);
  const invalid=shiftFormula('=A1',-1,0);assert.equal(invalid,'=#REF!');assert.equal(calculateSheet([[invalid]])[0][0],'#REF!');assert.equal(calculateSheet([['=IFERROR(#REF!,"missing")']])[0][0],'missing');
 });
+
+test('with a filter on, clear, fill and copy leave the hidden rows alone', async () => {
+  const { clearShown, fillShown, copyShown } = await import('../shared/sheet-edit.mjs');
+  const rows = [['n', 'k'], ['A', 'yes'], ['B', 'no'], ['C', 'no'], ['D', 'yes']], shown = [0, 1, 4], range = { top: 1, bottom: 4, left: 0, right: 0 };
+  assert.deepEqual(clearShown(rows, range, shown).map(r => r[0]), ['n', '', 'B', 'C', ''], 'only the visible rows are blanked');
+  assert.deepEqual(clearShown(rows, range, null).map(r => r[0]), ['n', '', '', '', ''], 'without a filter every row is');
+  assert.deepEqual(fillShown(rows, range, shown).map(r => r[0]), ['n', 'A', 'B', 'C', 'A'], 'fill down skips hidden rows');
+  assert.equal(copyShown(rows, range, shown), 'A\nD', 'copy takes only what is visible');
+  assert.equal(copyShown(rows, range, null), 'A\nB\nC\nD');
+});

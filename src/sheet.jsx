@@ -4,7 +4,7 @@ import { passingRows } from '../shared/workbook.mjs';
 import { FilterPanel } from './sheet-filter';
 import { csvParse, csvStringify } from '../shared/domain.mjs';
 import { calculateSheet, columnName, address } from '../shared/sheet.mjs';
-import { bounds, clipboardText, clipboardRows, putCells, fillDown, shiftFormula, SHEET_ROWS, SHEET_COLUMNS } from '../shared/sheet-edit.mjs';
+import { bounds, clipboardText, clipboardRows, putCells, fillDown, clearShown, fillShown, copyShown, shiftFormula, SHEET_ROWS, SHEET_COLUMNS } from '../shared/sheet-edit.mjs';
 import { api } from './api.js';
 import './sheet.css';
 const example = '# rows contains editable cells; values contains calculated values.\n# Addresses include the header row: A1 is the first cell.\nprint("Rows:", len(rows))\n# Example: set_cell("D2", "=SUM(B2:C2)")\n';
@@ -33,8 +33,9 @@ export function Sheet({ content, onChange, script, command, onScriptChange, onCo
  function select(row,col,extend=false,focus=true){row=Math.max(0,Math.min(SHEET_ROWS-1,row));col=Math.max(0,Math.min(SHEET_COLUMNS-1,col));const sequence=++focusSequence.current;setActive([row,col]);if(!extend)setAnchor([row,col]);if(!focus)return;requestAnimationFrame(()=>{const node=grid.current;if(!node||sequence!==focusSequence.current)return;const top=row*30;if(top<node.scrollTop+30||top>node.scrollTop+node.clientHeight-60){node.scrollTop=Math.max(0,top-60);setScrollTop(node.scrollTop);}requestAnimationFrame(()=>{if(sequence===focusSequence.current)grid.current?.querySelector(`[data-cell="${row}:${col}"]`)?.focus({preventScroll:false});});});}
  function begin(row=y,col=x,value,focus=true){const text=value??String(snapshot()[row]?.[col]??'');setEditing({y:row,x:col,value:text,original:current.current,recorded:false});if(value!==undefined)changeEdit(row,col,text);if(focus)requestAnimationFrame(()=>{const input=grid.current?.querySelector(`[data-cell="${row}:${col}"]`);input?.focus();input?.setSelectionRange(text.length,text.length);});}
  function undo(redo=false){setEditing(null);const from=redo?'redo':'undo',to=redo?'undo':'redo',value=history.current[from].pop();if(value===undefined)return;history.current[to].push(current.current);current.current=value;onChange(value);setHistoryVersion(n=>n+1);}
- function clear(){commit();const block=Array.from({length:range.bottom-range.top+1},()=>Array(range.right-range.left+1).fill(''));write(putCells(snapshot(),range.top,range.left,block));}
- function fill(){commit();if(range.bottom>range.top)write(fillDown(snapshot(),range));}
+ // With a filter on, edits to a selection leave the rows it hides alone.
+ function clear(){commit();write(clearShown(snapshot(),range,order));}
+ function fill(){commit();if(range.bottom>range.top)write(fillShown(snapshot(),range,order));}
  function append(axis){commit();try{const next=snapshot();if(axis==='row'){if(next.length>=SHEET_ROWS)throw Error('Maximum 10,000 rows.');const row=next.length;write([...next,Array(Math.min(SHEET_COLUMNS,next.reduce((max,row)=>Math.max(max,row.length),1))).fill('')]);select(row,0);}else{const col=next.reduce((max,row)=>Math.max(max,row.length),0);if(col>=SHEET_COLUMNS)throw Error('Maximum 256 columns.');write(next.map(r=>[...Array.from({length:col},(_,i)=>r[i]??''),'']));select(0,col);}}catch(e){setProblem(e.message);}}
  function key(event,row=y,col=x){
   const modifier=event.ctrlKey||event.metaKey;
@@ -49,7 +50,7 @@ export function Sheet({ content, onChange, script, command, onScriptChange, onCo
   else if(event.key==='F2'){event.preventDefault();begin(row,col);}
   else if(!modifier&&!event.altKey&&event.key.length===1){event.preventDefault();begin(row,col,event.key);}
  }
- function copy(event,cut=false){if(editRef.current||event.target.closest('.sheet-formula-bar'))return;const text=clipboardText(snapshot(),range);event.preventDefault();event.clipboardData.setData('text/plain',text);copied.current={text,range,cut};if(cut)clear();}
+ function copy(event,cut=false){if(editRef.current||event.target.closest('.sheet-formula-bar'))return;const text=copyShown(snapshot(),range,order);event.preventDefault();event.clipboardData.setData('text/plain',text);copied.current={text,range,cut};if(cut)clear();}
  function paste(event){const text=event.clipboardData.getData('text/plain');if(editRef.current&&!/[\t\n\r]/.test(text))return;event.preventDefault();commit();try{let block=clipboardRows(text);if(copied.current?.text===text&&!copied.current.cut)block=block.map(row=>row.map(value=>shiftFormula(value,range.top-copied.current.range.top,range.left-copied.current.range.left)));write(putCells(snapshot(),range.top,range.left,block));setAnchor([range.top,range.left]);setActive([range.top+block.length-1,range.left+Math.max(...block.map(r=>r.length))-1]);setProblem('');}catch(e){setProblem(e.message);}}
  const summary=useMemo(()=>{let count=0,sum=0,numbers=0;for(let r=range.top;r<=range.bottom;r++)for(let c=range.left;c<=range.right;c++){const value=values[r]?.[c];if(value!==''&&value!=null){count++;if(Number.isFinite(Number(value))){numbers++;sum+=Number(value);}}}return {count,sum,numbers};},[values,range.top,range.bottom,range.left,range.right]);
  const total=order?order.length:rowCount,start=Math.max(freeze?1:0,Math.floor(scrollTop/30)-8),end=Math.min(total,start+Math.ceil(viewport/30)+18),visibleRows=order?order.slice(start,end):Array.from({length:Math.max(0,end-start)},(_,i)=>start+i);
