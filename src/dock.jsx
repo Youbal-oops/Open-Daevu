@@ -51,7 +51,7 @@ export function DockProvider({ children }) {
       document.body.classList.remove('dock-dragging'); setDragging(null);
       if (live && side && e.type === 'pointerup') setSide(panel, side);
     };
-    const key = e => { if (e.key === 'Escape') { live = false; stop({ type: 'cancel' }); } };
+    const key = e => { if (e.key === 'Escape') { e.preventDefault(); live = false; stop({ type: 'cancel' }); } };
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop); window.addEventListener('pointercancel', stop); window.addEventListener('keydown', key);
   }, [setSide]);
   const value = useMemo(() => ({ dock, setSide, setWidth, resetWidth, swap, beginDrag, dragging }), [dock, dragging, setSide, setWidth, resetWidth, swap, beginDrag]);
@@ -84,18 +84,24 @@ export function ResizeEdge({ panel }) {
   const side = dock[panel + 'Side'], current = dock[panel + 'W'] ?? LIMITS[panel][2];
   const inner = side === 'left' ? 'right' : 'left';
   const begin = event => {
+    if (event.button !== 0) return;
     event.preventDefault();
     const startX = event.clientX, startW = ref.current.parentElement.getBoundingClientRect().width, sign = side === 'left' ? 1 : -1;
     document.body.classList.add('dock-resizing');
     // Pulled well past its narrowest width, a column folds away (App listens for rw-collapse).
-    let folded = false;
+    let folded = false, width = startW;
+    const variable = panel === 'chat' ? '--agent-panel-width' : '--sidebar-w';
+    const root = document.documentElement.style, previous = root.getPropertyValue(variable);
     const move = e => {
       if (folded) return;
       const wanted = startW + (e.clientX - startX) * sign;
       if (wanted < LIMITS[panel][0] - 70) { folded = true; stop(); window.dispatchEvent(new CustomEvent('rw-collapse', { detail: panel })); return; }
-      setWidth(panel, wanted);
+      width = clamp(panel, wanted, Math.max(LIMITS[panel][0], window.innerWidth - 520));
+      root.setProperty(variable, width + 'px');
     };
-    const stop = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop); window.removeEventListener('pointercancel', stop); document.body.classList.remove('dock-resizing'); };
+    const stop = e => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop); window.removeEventListener('pointercancel', stop); window.removeEventListener('keydown', key); document.body.classList.remove('dock-resizing'); if (e?.type === 'pointerup' || folded) setWidth(panel, width); else root.setProperty(variable, previous); };
+    const key = e => { if (e.key === 'Escape') { e.preventDefault(); stop(e); } };
+    window.addEventListener('keydown', key);
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop); window.addEventListener('pointercancel', stop);
   };
   return <div ref={ref} className={`resize-edge ${inner}`} role="separator" aria-orientation="vertical" aria-label={`Resize the ${panel === 'chat' ? 'chat' : 'project list'}`} aria-valuemin={LIMITS[panel][0]} aria-valuemax={LIMITS[panel][1]} aria-valuenow={Math.round(current)} tabIndex={0} title="Drag to resize · double-click to reset"

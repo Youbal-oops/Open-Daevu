@@ -7,8 +7,6 @@ const { pathToFileURL } = require('node:url');
 const { BoardsDatabase } = require('./boards-db.cjs');
 const { Store } = require('./store.cjs');
 const { Updates } = require('./updates.cjs');
-const sheetFiles = require('./sheet-files.cjs');
-const docConvert = require('./doc-convert.cjs');
 const { toIcs, parseIcs } = require('../shared/calendar.mjs');
 const { Reminders } = require('./reminders.cjs');
 const { DeviceLock } = require('./device-lock.cjs');
@@ -477,19 +475,18 @@ app.whenReady().then(async () => {
     for (const source of selected.filePaths) {
       const stat = await fs.stat(source);
       if (stat.size > 100 * 1024 * 1024) throw new Error('Import files under 100 MB each.');
-      // Word files become documents; if one cannot be converted it is kept as an ordinary upload.
-      if (docConvert.WORD.test(source)) {
+      // Keep the original Word upload alongside its editable Markdown conversion.
+      if (/\.(docx|docm|dotx|dotm|doc)$/i.test(source)) {
         try {
-          const content = await docConvert.wordToMarkdown(source), at = existingNotes + notes.length, now = new Date().toISOString();
+          const content = await require('./doc-convert.cjs').wordToMarkdown(source), at = existingNotes + notes.length, now = new Date().toISOString();
           notes.push({ id: id(), title: path.basename(source).replace(/\.[^.]+$/, '').slice(0, 160), content, kind: 'note', author: 'You', createdAt: now, updatedAt: now, position: { x: 80 + at % 3 * 350, y: 90 + Math.floor(at / 3) * 280 } });
-          continue;
         } catch {}
       }
       const fileId = id(), name = path.basename(source), storedName = fileId + path.extname(name).toLowerCase();
       await fs.copyFile(source, path.join(dir, 'files', storedName));
       files.push({ id: fileId, name, storedName, size: stat.size, createdAt: new Date().toISOString(), position: { x: 80 + files.length % 3 * 350, y: fileRow + Math.floor(files.length / 3) * 280 } });
       if (/\.(csv|md|txt)$/i.test(name) && stat.size <= 1024 * 1024) notes.push({ id: id(), title: name.replace(/\.[^.]+$/, ''), kind: /\.csv$/i.test(name) ? 'sheet' : 'note', content: await fs.readFile(source, 'utf8'), author: 'You', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), position: { x: 80 + (existingNotes + notes.length) % 3 * 350, y: 90 + Math.floor((existingNotes + notes.length) / 3) * 280 } });
-      if (sheetFiles.EXCEL_ONLY.test(name) && stat.size <= 50 * 1024 * 1024) { try { notes.push(sheetFiles.importFile(source, { x: 80 + (existingNotes + notes.length) % 3 * 350, y: 90 + Math.floor((existingNotes + notes.length) / 3) * 280 })); } catch {} }
+      if (/\.(xlsx|xlsm|xlsb|xls|ods|fods|numbers)$/i.test(name) && stat.size <= 50 * 1024 * 1024) { try { notes.push(require('./sheet-files.cjs').importFile(source, { x: 80 + (existingNotes + notes.length) % 3 * 350, y: 90 + Math.floor((existingNotes + notes.length) / 3) * 280 })); } catch {} }
     }
     await store.update(s => { const p = s.projects.find(p => p.id === projectId); p.files.push(...files); p.notes.push(...notes); return s; });
   });
@@ -534,7 +531,7 @@ app.whenReady().then(async () => {
     const selected = await dialog.showOpenDialog(window, { title: 'Import spreadsheets', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Spreadsheets', extensions: ['xlsx', 'xlsm', 'xlsb', 'xls', 'ods', 'fods', 'csv', 'tsv', 'numbers'] }, { name: 'All files', extensions: ['*'] }] });
     if (selected.canceled) return 0;
     const existing = store.state.projects.find(p => p.id === projectId)?.notes.length || 0, notes = [];
-    for (const file of selected.filePaths) notes.push(sheetFiles.importFile(file, { x: 80 + (existing + notes.length) % 3 * 350, y: 90 + Math.floor((existing + notes.length) / 3) * 280 }));
+    for (const file of selected.filePaths) notes.push(require('./sheet-files.cjs').importFile(file, { x: 80 + (existing + notes.length) % 3 * 350, y: 90 + Math.floor((existing + notes.length) / 3) * 280 }));
     await store.update(s => { s.projects.find(p => p.id === projectId).notes.push(...notes); return s; });
     return notes.length;
   });
@@ -545,7 +542,7 @@ app.whenReady().then(async () => {
       const base = note.title.replace(/[<>:"/\\|?*]/g, '-'), picked = await dialog.showSaveDialog(window, { defaultPath: `${base}.xlsx`, filters: [{ name: 'Excel workbook', extensions: ['xlsx'] }, { name: 'OpenDocument spreadsheet', extensions: ['ods'] }, { name: 'CSV (first sheet)', extensions: ['csv'] }] });
       if (picked.canceled) return;
       if (/\.csv$/i.test(picked.filePath)) await fs.writeFile(picked.filePath, note.content, 'utf8');
-      else { const { projectFiles } = await import('../shared/workbook.mjs'), { csvParse } = await import('../shared/domain.mjs'); sheetFiles.writeNote(note, picked.filePath, projectFiles(project.notes, csvParse, note.id)); }
+      else { const { projectFiles } = await import('../shared/workbook.mjs'), { csvParse } = await import('../shared/domain.mjs'); require('./sheet-files.cjs').writeNote(note, picked.filePath, projectFiles(project.notes, csvParse, note.id)); }
       return;
     }
     const selected = await dialog.showSaveDialog(window, { defaultPath: `${note.title.replace(/[<>:"/\\|?*]/g, '-')}.${note.kind === 'sheet' ? 'csv' : 'md'}` });

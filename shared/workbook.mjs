@@ -1,3 +1,4 @@
+import { sheetContext } from './sheet.mjs';
 // A spreadsheet document holds several sheets. The first one is the note's own `content` (so references, Python and the
 // canvas keep working); the rest live in `sheets`. Each sheet can carry a smart filter.
 export const MAX_SHEETS = 24;
@@ -109,4 +110,18 @@ export function projectFiles(notes, parse, exceptId) {
     files[String(note.title).trim().toLowerCase()] = { sheets, first: book[0].name.toLowerCase() };
   }
   return files;
+}
+
+export function projectSheetContext(note, notes, parse, name) {
+  const book = workbookOf(note);
+  return sheetContext(book, parse, name || book[0].name, projectFiles(notes, parse, note.id));
+}
+
+export function stableSheetSources(notes, previous = []) {
+  const next = (notes || []).filter(note => note.kind === 'sheet');
+  const sameTabs = (a = [], b = []) => a.length === b.length && a.every((sheet, i) => sheet.id === b[i].id && sheet.name === b[i].name && sheet.content === b[i].content);
+  return next.length === previous.length && next.every((note, i) => {
+    const before = previous[i];
+    return note.id === before.id && note.title === before.title && note.content === before.content && note.sheetName === before.sheetName && sameTabs(note.sheets, before.sheets);
+  }) ? previous : next;
 }

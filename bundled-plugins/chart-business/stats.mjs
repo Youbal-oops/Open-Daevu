@@ -44,11 +44,17 @@ const signed = n => (n < 0 ? '− ' : '+ ') + g(Math.abs(n));
 
 export function polyFit(xs, ys, degree) {
   if (xs.length <= degree) return null;
-  const m = degree + 1, A = Array.from({ length: m }, (_, r) => Array.from({ length: m }, (_, c) => sum(xs.map(x => x ** (r + c))))), b = Array.from({ length: m }, (_, r) => sum(xs.map((x, i) => ys[i] * x ** r)));
-  const coef = solve(A, b); if (!coef) return null;
-  const fn = x => coef.reduce((acc, c, k) => acc + c * x ** k, 0);
-  const terms = coef.map((c, k) => [c, k]).reverse().map(([c, k], at) => { const mono = k === 0 ? '' : k === 1 ? 'x' : `x^${k}`; return at === 0 ? `${g(c)}${mono}` : `${signed(c)}${mono}`; });
-  return { fn, equation: 'y = ' + terms.join(' '), r2: rSquared(ys, xs.map(fn)), params: coef };
+  const center = mean(xs), scale = xs.reduce((m, x) => Math.max(m, Math.abs(x - center)), 0);
+  if (!scale) return null;
+  const zs = xs.map(x => (x - center) / scale), m = degree + 1;
+  const A = Array.from({ length: m }, (_, r) => Array.from({ length: m }, (_, c) => sum(zs.map(x => x ** (r + c))))), b = Array.from({ length: m }, (_, r) => sum(zs.map((x, i) => ys[i] * x ** r)));
+  const normalized = solve(A, b); if (!normalized) return null;
+  const fn = x => { const z = (x - center) / scale; let y = 0; for (let k = degree; k >= 0; k--) y = y * z + normalized[k]; return y; };
+  const coef = Array(m).fill(0);
+  for (let k = 0; k <= degree; k++) { let choose = 1; for (let j = 0; j <= k; j++) { coef[j] += normalized[k] / scale ** k * choose * (-center) ** (k - j); choose = choose * (k - j) / (j + 1); } }
+  const shifted = Math.abs(center) > 100 * scale, terms = (shifted ? normalized : coef).map((c, k) => [c, k]).reverse().map(([c, k], at) => { const variable = shifted ? 'z' : 'x', mono = k === 0 ? '' : k === 1 ? variable : `${variable}^${k}`; return at === 0 ? `${g(c)}${mono}` : `${signed(c)}${mono}`; });
+  return { fn, equation: 'y = ' + terms.join(' ') + (shifted ? `; z = (x − ${center}) / ${scale}` : ''), r2: rSquared(ys, xs.map(fn)), params: coef };
+
 }
 export const linearFit = (xs, ys) => polyFit(xs, ys, 1);
 export function expFit(xs, ys) { const keep = xs.map((x, i) => [x, ys[i]]).filter(([, y]) => y > 0); if (keep.length < 2) return null; const f = linearFit(keep.map(p => p[0]), keep.map(p => Math.log(p[1]))); if (!f) return null; const b = f.params[1], a = Math.exp(f.params[0]), fn = x => a * Math.exp(b * x); return { fn, equation: `y = ${g(a)}·e^(${g(b)}x)`, r2: rSquared(ys, xs.map(fn)), params: [a, b] }; }
@@ -69,3 +75,6 @@ export function niceScale(min, max, count = 5) {
   return { min: lo, max: hi, ticks };
 }
 export function logTicks(min, max) { const lo = Math.floor(Math.log10(Math.max(min, 1e-12))), hi = Math.ceil(Math.log10(Math.max(max, min * 10))), ticks = []; for (let e = lo; e <= hi; e++) ticks.push(10 ** e); return { min: 10 ** lo, max: 10 ** hi, ticks }; }
+
+export function minimum(values, baseline = Infinity) { for (const value of values) baseline = Math.min(baseline, value); return baseline; }
+export function maximum(values, baseline = -Infinity) { for (const value of values) baseline = Math.max(baseline, value); return baseline; }

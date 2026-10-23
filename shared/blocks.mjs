@@ -1,4 +1,4 @@
-import { fixMarkdown, isTableLine, isTableSeparator } from './markdown-fix.mjs';
+import { isTableLine, isTableSeparator } from './markdown-fix.mjs';
 
 const randomId = () => globalThis.crypto.randomUUID();
 
@@ -23,7 +23,7 @@ export function listNumbers(blocks) {
 }
 
 export function markdownToBlocks(markdown, makeId = randomId) {
-  const lines = fixMarkdown(markdown).split('\n'), blocks = [];
+  const lines = String(markdown ?? '').replace(/\r\n/g, '\n').split('\n'), blocks = [];
   const push = (type, text, extra = {}) => blocks.push({ id: makeId(), type, text, ...extra });
   let paragraph = [], widths = [0];
   const flush = () => { if (paragraph.length) { push('p', paragraph.join('\n')); paragraph = []; } };

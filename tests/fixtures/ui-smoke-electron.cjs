@@ -21,6 +21,8 @@ const picture = makePng(120, 80), pictureDir = path.join(root, 'workspace', 'pro
 fs.mkdirSync(pictureDir, { recursive: true });
 fs.writeFileSync(path.join(pictureDir, 'pic1.png'), picture);
 state.projects[0].files = [{ id: 'pic1', name: 'Photo.png', storedName: 'pic1.png', size: picture.length, createdAt: new Date().toISOString(), position: { x: 0, y: 0 } }];
+state.projects[0].files.push({ ...state.projects[0].files[0], id: 'hidden', name: 'Inline.png', storedName: 'hidden.png', inline: true });
+fs.writeFileSync(path.join(pictureDir, 'hidden.png'), picture);
 fs.writeFileSync(path.join(root, 'workspace', 'workspace.json'), JSON.stringify(state));
 const timer = setTimeout(() => { console.error('smoke test timed out'); app.exit(1); }, 150000);
 dialog.showErrorBox = (title, message) => { console.error(title + ': ' + message); app.exit(1); };
@@ -38,9 +40,34 @@ app.once('browser-window-created', (_event, window) => {
       await wait("!!document.querySelector('.sidebar')", 'app shell');
       assert.equal(await run("document.querySelector('.workspace-nav').hidden"), true, 'the Workspace section starts collapsed');
       assert.ok(await run("!!document.querySelector('.titlebar .nav-island')"), 'our own title bar is shown');
+      const resizeState = await run(`(() => {
+        const grip=document.querySelector('.sidebar .resize-edge'),before=localStorage.getItem('rw-dock-v1');
+        grip.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,clientX:200}));
+        window.dispatchEvent(new PointerEvent('pointermove',{clientX:264,buttons:1}));
+        return {before,during:localStorage.getItem('rw-dock-v1'),width:document.documentElement.style.getPropertyValue('--sidebar-w')};
+      })()`);
+      assert.equal(resizeState.during,resizeState.before,'resizing does not persist at pointer rate');
+      await run("window.dispatchEvent(new PointerEvent('pointerup',{clientX:264}))");await pause(100);
+      assert.equal(await run("JSON.parse(localStorage.getItem('rw-dock-v1')).sidebarW"),parseInt(resizeState.width));
+      const sideBefore = await run("document.querySelector('.app-shell').classList.contains('sidebar-collapsed')");
+      await run(`(() => { document.activeElement?.blur();document.querySelector('.sidebar .dock-grip').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,clientX:100,clientY:100}));window.dispatchEvent(new PointerEvent('pointermove',{clientX:130,clientY:120,buttons:1})); })()`);
+      await wait("document.body.classList.contains('dock-dragging')",'column drag started');
+      await run("window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}))");await pause(100);
+      assert.equal(await run("document.querySelector('.app-shell').classList.contains('sidebar-collapsed')"),sideBefore,'Escape cancels the drag without toggling the sidebar');
+      assert.equal(await run("document.body.classList.contains('dock-dragging')"),false);
+      results.dock='resize saved once; Escape cancels only the drag';
+
       results.shell = 'collapsed workspace, own title bar';
       wc.send('deeplink', { project: 'research-project', note: 'brief' });
       await wait("!!document.querySelector('.editor-page')", 'deep link opens the document');
+      await pause(100);
+      const beforeBlocks = await run("[...document.querySelectorAll('[data-block-id]')].map(el => el.dataset.blockId)");
+      await run("document.querySelector('button[aria-label=\"Hide sidebar\"]').click()");await pause(100);
+      await run("document.querySelector('button[aria-label=\"Show sidebar\"]').click()");await pause(100);
+      assert.deepEqual(await run("[...document.querySelectorAll('[data-block-id]')].map(el => el.dataset.blockId)"),beforeBlocks);
+      assert.equal(await run("document.querySelector('[aria-label=\"Undo\"]')?.disabled"),true,'opening a legacy note and unrelated renders add no undo steps');
+      results.legacyUndo='stable blocks; no phantom undo';
+
       results.deepLink = 'opened document';
 
       await wait("!!document.querySelector('.doc-blocks .doc-text')", 'the document opens in the editor');
@@ -186,6 +213,8 @@ app.once('browser-window-created', (_event, window) => {
       await wait("!!document.querySelector('.tab-strip button[role=tab][aria-label=\"Files\"]')", 'project tabs');
       await run("document.querySelector('.tab-strip button[role=tab][aria-label=\"Files\"]').click()");
       await wait("[...document.querySelectorAll('.files-grid button')].some(b => /Photo\\.png/.test(b.textContent))", 'uploaded file listed');
+      const counts = await run("({ uploads: [...document.querySelectorAll('.files-tabs button')].find(b => b.textContent.includes('Uploads')).querySelector('small').textContent, all: document.querySelector('.files-tabs button').querySelector('small').textContent, notes: document.querySelectorAll('.files-grid .file-card:not(.upload)').length, uploadsShown: document.querySelectorAll('.file-card.upload').length })");
+      assert.equal(counts.uploads,'1'); assert.equal(counts.uploadsShown,1); assert.equal(Number(counts.all),counts.notes+1); results.fileCounts='hidden pictures excluded';
       await run("[...document.querySelectorAll('.files-grid button')].find(b => /Photo\\.png/.test(b.textContent)).click()");
       await wait("!!document.querySelector('.image-viewer .iv-canvas img') && document.querySelector('.iv-canvas img').complete && document.querySelector('.iv-canvas img').naturalWidth === 120", 'the image opens inside the app');
       assert.ok(await run("[...document.querySelectorAll('.tab-strip [role=tab]')].some(t => /Photo\\.png/.test(t.textContent))"), 'the image has its own tab');
@@ -205,8 +234,8 @@ app.once('browser-window-created', (_event, window) => {
       await wait("[...document.querySelectorAll('.iv-text')].some(t => /Check this corner/.test(t.textContent))", 'text note placed');
       await pause(1800);
       const marked = await run("window.workspace.load().then(s => { const home = s.projects.find(p => p.id === 'research-project'), f = home.files.find(x => x.id === 'pic1'); return { strokes: f.annotations?.strokes.length, texts: f.annotations?.texts.map(t => t.v), files: home.files.length }; })");
-      assert.deepEqual([marked.strokes, marked.texts, marked.files], [1, ['Check this corner'], 1], 'marks saved on the file record: ' + JSON.stringify(marked));
-      assert.deepEqual(fs.readdirSync(pictureDir), ['pic1.png'], 'no copy of the image was created');
+      assert.deepEqual([marked.strokes, marked.texts, marked.files], [1, ['Check this corner'], 2], 'marks saved on the file record: ' + JSON.stringify(marked));
+      assert.deepEqual(fs.readdirSync(pictureDir).sort(), ['hidden.png','pic1.png'], 'no copy of the image was created');
       assert.ok(fs.readFileSync(path.join(pictureDir, 'pic1.png')).equals(picture), 'the original image is byte-for-byte unchanged');
       await run("document.querySelector('button[aria-label^=\"Eraser\"]').click()");
       await run("document.querySelector('.iv-marks g path[stroke=transparent]').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, buttons: 1, pointerId: 7 }))");

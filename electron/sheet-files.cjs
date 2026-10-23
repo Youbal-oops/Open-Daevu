@@ -14,7 +14,8 @@ function textOf(cell) {
   if (!cell) return '';
   if (cell.f) return '=' + cell.f;
   switch (cell.t) {
-    case 'n': return String(cell.v);
+    // A number shown with leading zeros (a zip code, an ID) stays the text it was shown as.
+    case 'n': return typeof cell.w === 'string' && /^-?0\d+$/.test(cell.w.trim()) ? cell.w.trim() : String(cell.v);
     case 'b': return cell.v ? 'TRUE' : 'FALSE';
     case 'd': return cell.v instanceof Date && !Number.isNaN(cell.v.getTime()) ? cell.v.toISOString().slice(0, 10) : String(cell.w ?? '');
     case 'e': return String(cell.w || '#ERROR!');
@@ -35,11 +36,21 @@ function rowsOf(sheet) {
   return rows.map(row => row.slice(0, width).concat(Array(Math.max(0, width - row.length)).fill('')));
 }
 
+// Plain-text tables are read as text so nothing is turned into a number or loses its zeros; the file is UTF-8, or Windows-1252 when it is not.
+function readAny(file) {
+  const options = { cellDates: true, cellFormula: true, cellStyles: false, sheetRows: MAX_ROWS + 1 };
+  if (!/\.(csv|tsv|txt)$/i.test(file)) return XLSX.readFile(file, options);
+  const bytes = fs.readFileSync(file);
+  let text = new TextDecoder('utf-8', { fatal: false }).decode(bytes).replace(/^﻿/, '');
+  if (text.includes('�')) text = new TextDecoder('windows-1252').decode(bytes);
+  return XLSX.read(text, { ...options, type: 'string', raw: true, FS: /\.tsv$/i.test(file) ? '	' : undefined });
+}
+
 // Every sheet of the file, as { name, rows }.
 function readWorkbook(file) {
   const size = fs.statSync(file).size;
   if (size > MAX_BYTES) throw new Error('Import spreadsheets under 50 MB.');
-  const workbook = XLSX.readFile(file, { cellDates: true, cellFormula: true, cellStyles: false, sheetRows: MAX_ROWS + 1 });
+  const workbook = readAny(file);
   if (!workbook.SheetNames.length) throw new Error('That file has no sheets.');
   return workbook.SheetNames.slice(0, MAX_SHEETS).map(name => ({ name, rows: rowsOf(workbook.Sheets[name]) }));
 }
@@ -88,7 +99,7 @@ function writeNote(note, file, files) {
       maxC = Math.max(maxC, c);
       const value = values[r][c], cell = typeof value === 'number' ? { t: 'n', v: value } : typeof value === 'boolean' ? { t: 'b', v: value } : { t: 's', v: String(value) };
       if (raw.startsWith('=')) cell.f = renameRefs(raw.slice(1), names);
-      else if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) { cell.t = 'n'; cell.v = Number(value); }
+      else if (typeof value === 'string' && /^-?(0|[1-9]\d{0,14})(\.\d+)?$/.test(value.trim())) { cell.t = 'n'; cell.v = Number(value); }
       ws[XLSX.utils.encode_cell({ r, c })] = cell;
     }));
     ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(0, rows.length - 1), c: maxC } });

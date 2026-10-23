@@ -40,6 +40,10 @@ test('notes in a plain json block are saved too, but ordinary json is left alone
   assert.equal(parseActions(`${fence}research-actions\n${JSON.stringify(notes)}\n${fence}`).notes.length, 1);
   assert.equal(parseActions(`${fence}json\n{"name":"x","notes":[1]}\n${fence}`).notes.length, 0, 'not an actions block');
   assert.equal(parseActions(`${fence}json\n{"a":1}\n${fence}`).notes.length, 0);
+  for (const key of ['databaseWrites', 'handoffs', 'schedules']) {
+    const quoted = parseActions(`Example:\n${fence}json\n${JSON.stringify({ [key]: [{ op: 'drop', table: 't', agentId: 'x', task: 'y', name: 'n' }] })}\n${fence}`);
+    assert.equal((quoted.databaseWrites || []).length + quoted.handoffs.length + quoted.schedules.length, 0, key + ' in a plain block is only an example');
+  }
   assert.equal(parseActions(`${fence}json\n{"notes":[{"title":"t"}]}\n${fence}`).notes.length, 0, 'a note needs content');
 });
 
@@ -80,4 +84,63 @@ test('an agent can add to the project page', async t => {
   const page = store.state.projects.find(p => p.id === 'research-project').page;
   assert.ok(page.blocks.some(b => /Findings/.test(b.text)), 'the heading is on the page');
   await assert.rejects(tools.edit_project_page.call({ markdown: 'x', project: 'no such project' }), /not found/);
+});
+
+test('an agent never overwrites a document the user wrote, or a spreadsheet with a note', async t => {
+  const { store, tools } = await setup(t), project = () => store.state.projects.find(p => p.id === 'research-project');
+  const first = project().notes[0];
+  await assert.rejects(tools.save_document.call({ title: first.title, content: 'Replaced' }), /did not write/);
+  assert.notEqual(project().notes.find(n => n.id === first.id).content, 'Replaced');
+  const viaId = await tools.save_document.call({ title: first.title, content: 'Replaced on purpose', id: first.id });
+  assert.equal(viaId.saved.updated, true); assert.equal(project().notes.find(n => n.id === first.id).content, 'Replaced on purpose');
+  const sheet = await tools.save_document.call({ title: 'Budget plan', kind: 'sheet', content: 'a,b\n1,2' });
+  const note = await tools.save_document.call({ title: 'Budget plan', kind: 'note', content: 'Prose' });
+  assert.notEqual(note.saved.id, sheet.saved.id, 'a note does not replace a spreadsheet of the same name');
+  assert.equal(project().notes.find(n => n.id === sheet.saved.id).content, 'a,b\n1,2');
+  const mine = await tools.save_document.call({ title: 'Budget plan', kind: 'note', content: 'Prose v2' });
+  assert.equal(mine.saved.id, note.saved.id, 'an agent can update its own document by title');
+});
+
+test('updating a board keeps its link, settings and position; a linked board is changed at its source', async t => {
+  const { store, tools } = await setup(t), project = () => store.state.projects.find(p => p.id === 'research-project');
+  const made = await tools.save_board.call({ title: 'Traffic', kind: 'bar', csv: 'Month,Visits\nJan,1' });
+  const record = project().artifacts.find(a => a.id === made.saved.id);
+  await store.mutate({ type: 'artifact', projectId: 'research-project', value: { ...record, data: { ...record.data, options: { stacked: true }, place: { x: 5, y: 6, w: 300, h: 200 }, transpose: true } } });
+  await tools.save_board.call({ title: 'Traffic', kind: 'bar', csv: 'Month,Visits\nJan,9' });
+  const after = project().artifacts.find(a => a.id === made.saved.id);
+  assert.equal(after.data.csv, 'Month,Visits\nJan,9'); assert.deepEqual(after.data.options, { stacked: true }); assert.deepEqual(after.data.place, { x: 5, y: 6, w: 300, h: 200 }); assert.equal(after.data.transpose, true);
+  await store.mutate({ type: 'artifact', projectId: 'research-project', value: { ...after, data: { ...after.data, source: { type: 'sheet', sheetId: 'x' } } } });
+  await assert.rejects(tools.save_board.call({ title: 'Traffic', kind: 'bar', csv: 'a,b\n1,2' }), /draws its numbers from a spreadsheet/);
+  assert.equal(project().artifacts.find(a => a.id === made.saved.id).data.source.sheetId, 'x', 'the link is untouched');
+});
+
+
+test('agent tool arguments preserve fenced code in pages, tasks and diagram labels (#31)', async t => {
+ const {store,tools}=await setup(t), code='```js\nconsole.log("hello");\n```';
+ await tools.edit_project_page.call({markdown:code});
+ assert.ok(store.state.projects[0].page.blocks.some(b=>b.type==='code' && b.text.includes('console.log')));
+ await tools.add_calendar_tasks.call({tasks:[{title:'Read code',date:'2026-10-23',notes:code}]});
+ assert.equal(store.state.todos[0].notes,code);
+ await tools.draw_diagram.call({title:'Code',nodes:[{id:'code',label:code}]});
+ assert.ok(store.state.projects[0].canvas.some(item=>item.text===code));
+});
+
+test('calendar task batches deduplicate themselves and roll back when the task cap is exceeded (#34)', async t => {
+ const {store,tools}=await setup(t),task={title:'One task',date:'2026-10-23'};
+ const result=await tools.add_calendar_tasks.call({tasks:[task,{...task,title:'ONE TASK'}]});
+ assert.equal(result.added.length,1);assert.equal(result.skipped,1);
+ await store.update(s=>{s.todos=Array.from({length:499},(_,i)=>({id:'task-'+i,title:'Existing '+i,date:'2026-10-23'}));return s;});
+ await assert.rejects(tools.add_calendar_tasks.call({tasks:[{title:'New one',date:'2026-10-23'},{title:'New two',date:'2026-10-23'}]}),/500/);
+ assert.equal(store.state.todos.length,499);assert.ok(store.state.todos.every(t=>!t.title.startsWith('New')));
+});
+
+test('updating a Kanban keeps moved cards and appends only new ones (#32)', async t => {
+ const {store,tools}=await setup(t),args={title:'Pipeline',kind:'kanban',columns:[{title:'Todo',cards:['Write']},{title:'Done',cards:[]}]};
+ const saved=await tools.save_board.call(args),id=saved.saved.id;
+ await store.update(s=>{const b=s.projects[0].artifacts.find(a=>a.id===id),card=b.data.columns[0].cards.pop();b.data.columns[1].cards.push(card);return s;});
+ const before=structuredClone(store.state.projects[0].artifacts.find(a=>a.id===id));
+ await tools.save_board.call({...args,columns:[{title:'Todo',cards:['Write','Review']},{title:'Done',cards:[]}]});
+ const after=store.state.projects[0].artifacts.find(a=>a.id===id);
+ assert.deepEqual(after.data.columns[1],before.data.columns[1]);assert.equal(after.data.columns[0].id,before.data.columns[0].id);
+ assert.deepEqual(after.data.columns[0].cards.map(c=>c.text),['Review']);
 });

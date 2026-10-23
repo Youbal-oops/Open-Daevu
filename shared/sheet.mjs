@@ -62,7 +62,6 @@ function formatNumber(value, pattern) {
   if (/[ymd]/i.test(p) && /y|d/i.test(p)) { const iso = isoOf(num(value)), [Y, M, D] = iso.split('-'); return p.replace(/yyyy/gi, Y).replace(/yy/gi, Y.slice(2)).replace(/mm/gi, M).replace(/dd/gi, D); }
   const pct = p.includes('%'), body = p.replace(/%/g, ''), decimals = (body.split('.')[1] || '').replace(/[^0#]/g, '').length, group = body.includes(','), v = pct ? num(value) * 100 : num(value);
   let out = Math.abs(v).toFixed(decimals);
-  if (group) out = out.replace(/\B(?=(\d{3})+(?!\d))/g, (m, i) => out.split('.')[0].length - i > 0 ? ',' : '').replace(/^(\d+)/, d => d);
   if (group) { const [i, f] = Math.abs(v).toFixed(decimals).split('.'); out = i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (f ? '.' + f : ''); }
   const prefix = (/^[^0#,.]*/.exec(body) || [''])[0], suffix = (/[^0#,.]*$/.exec(body) || [''])[0];
   return (v < 0 ? '-' : '') + prefix + out + suffix + (pct ? '%' : '');
@@ -92,10 +91,11 @@ export function calculateSheet(rows, context = {}) {
   function cell(grid, y, x, depth = 0) {
     const key = `${grid}|${y}:${x}`;
     if (cache.has(key)) return cache.get(key);
+    const raw = String(grids.get(grid)?.[y]?.[x] ?? '');
+    // Only working out a formula counts against the limit; reading plain text is free, so a big table never shows #LIMIT!.
+    if (!raw.startsWith('=')) return raw;
     if (--budget < 0 || depth > 100) throw Error('#LIMIT!');
     if (visiting.has(key)) throw Error('#CYCLE!');
-    const raw = String(grids.get(grid)?.[y]?.[x] ?? '');
-    if (!raw.startsWith('=')) return raw;
     visiting.add(key);
     try { const result = parse(raw.slice(1), depth, grid, [y, x]); if (typeof result === 'number' && !Number.isFinite(result)) throw Error('#NUM!'); if (result instanceof Range) throw Error('#VALUE!'); cache.set(key, result); return result; }
     finally { visiting.delete(key); }
@@ -185,7 +185,6 @@ export function calculateSheet(rows, context = {}) {
     let best = -1; for (let k = 0; k < list.length; k++) { if (list[k] === '' ) continue; if (compare(list[k], key) <= 0) best = k; else break; } return best;
   }
   function call(name, args, home, at = [0, 0]) {
-    const lazy = { IF: 1, IFERROR: 1, IFNA: 1, IFS: 1, SWITCH: 1, CHOOSE: 1 };
     if (name === 'IF') { if (args.length < 2 || args.length > 3) throw Error('#VALUE!'); return truth(args[0]()) ? args[1]() : args[2]?.() ?? false; }
     if (name === 'IFERROR' || name === 'IFNA') { if (args.length !== 2) throw Error('#VALUE!'); try { return args[0](); } catch (e) { if (name === 'IFNA' && e.message !== '#N/A') throw e; return args[1](); } }
     if (name === 'IFS') { if (args.length < 2 || args.length % 2) throw Error('#VALUE!'); for (let k = 0; k < args.length; k += 2) if (truth(args[k]())) return args[k + 1](); throw Error('#N/A'); }

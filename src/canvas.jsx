@@ -8,7 +8,7 @@ import { recognizeShape } from '../shared/shape-recognize.mjs';
 import { TEMPLATES, buildTemplate } from '../shared/canvas-templates.mjs';
 import { csvParse, csvStringify } from '../shared/domain.mjs';
 import { calculateSheet, columnName, sheetContext } from '../shared/sheet.mjs';
-import { workbookOf } from '../shared/workbook.mjs';
+import { workbookOf, projectSheetContext } from '../shared/workbook.mjs';
 import { uid, now, date, excerpt, Markdown } from './ui';
 import { ingestFiles, usePicture, IMAGE_TYPES } from './float-images';
 import { ArtifactPreview, NewBoardItems, kindIcon, newArtifact } from './boards';
@@ -74,8 +74,8 @@ function Cell({ raw, shown, onCommit }) {
   useEffect(() => { if (!focus) setValue(raw); }, [raw, focus]);
   return <input className="nodrag" aria-label="Cell" value={focus ? value : String(shown ?? '')} onFocus={() => setFocus(true)} onChange={e => setValue(e.target.value)} onBlur={() => { setFocus(false); if (value !== raw) onCommit(value); }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}/>;
 }
-export function SheetEmbed({ note, h }) {
-  const parsed = useMemo(() => { try { const rows = csvParse(note.content); return { rows, values: calculateSheet(rows, sheetContext(workbookOf(note), csvParse, workbookOf(note)[0].name)) }; } catch (e) { return { error: e.message }; } }, [note.content, note.sheets]);
+export function SheetEmbed({ note, h, project }) {
+  const parsed = useMemo(() => { try { const rows = csvParse(note.content); return { rows, values: calculateSheet(rows, projectSheetContext(note, project?.notes || h?.current?.project?.notes || [], csvParse)) }; } catch (e) { return { error: e.message }; } }, [note.content, note.sheets, note.sheetName, project?.notes, h?.current?.project?.notes]);
   const [limit, setLimit] = useState({ rows: SHEET_STEP.rows, cols: 8 });
   if (parsed.error) return <p className="inline-error">{parsed.error}</p>;
   const { rows, values } = parsed;
@@ -376,6 +376,7 @@ function CanvasInner({ project, onOpen, onFile, onOpenArtifact, act, onImport, o
   const board = value => { if (value.edges) pendingEdges.current = Date.now(); if (value.positions || value.layout || value.edges) remember(); return act({ type: 'board', projectId: project.id, value }).catch(() => {}); };
   const handlers = useRef({});
   handlers.current = {
+    project,
     // The board updates at once; the save to disk follows.
     saveItem: item => { remember(); if (item.type !== 'artifact') setNodes(ns => ns.some(n => n.id === item.id) ? ns.map(n => n.id === item.id ? { ...n, width: item.size.w, height: item.size.h, position: item.position, draggable: !item.lock, ...(item.type === 'frame' ? {} : { zIndex: item.z || 0 }), data: { ...n.data, item } } : n) : [...ns, { id: item.id, type: item.type === 'draw' || item.type === 'diagram' || item.type === 'link' ? item.type : 'shape', position: item.position, width: item.size.w, height: item.size.h, ...(item.type === 'frame' ? { zIndex: -1 } : {}), data: { item, h: handlers } }]); return act({ type: 'canvas:item', projectId: project.id, value: item }).catch(() => {}); },
     live: (id, s) => setNodes(ns => ns.map(n => n.id === id ? { ...n, width: s.w, height: s.h } : n)),

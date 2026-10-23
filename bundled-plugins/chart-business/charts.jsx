@@ -1,3 +1,4 @@
+import { minimum, maximum } from './common.jsx';
 import React, { useMemo } from 'react';
 import { categoryData, toNumber } from './data.mjs';
 import { PALETTE, color, fmt, shorten, scale, Empty, Title, Frame, layout } from './common.jsx';
@@ -7,7 +8,7 @@ function WaterfallChart({ table, o, compact }) {
   if (!labels.length || !series.length) return <Empty>List the steps in the first column and their changes in the second.</Empty>;
   const { W, H, pad } = layout(compact, o), values = series[0].values; let run = 0;
   const steps = values.map((v, i) => { const total = /^(total|sum|balance|end|net)/i.test(labels[i]); const from = total ? 0 : run, to = total ? run : run + v; if (!total) run += v; return { v, from, to, total }; });
-  const ys = scale(Math.min(0, ...steps.flatMap(s => [s.from, s.to])), Math.max(...steps.flatMap(s => [s.from, s.to]), 0), H - pad.b, pad.t, { zero: true }), band = (W - pad.l - pad.r) / steps.length, w = Math.min(56, band * .7);
+  const ys = scale(minimum(steps.flatMap(s => [s.from, s.to]), 0), maximum(steps.flatMap(s => [s.from, s.to]), 0), H - pad.b, pad.t, { zero: true }), band = (W - pad.l - pad.r) / steps.length, w = Math.min(56, band * .7);
   return <div className="chart-wrap"><Title o={o}/><svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="waterfall chart">
     <Frame W={W} H={H} pad={pad} ys={ys} o={o} xTitle={o.xTitle} yTitle={o.yTitle}/>
     {steps.map((s, i) => { const x = pad.l + band * (i + .5), top = ys.at(Math.max(s.from, s.to)), h = Math.max(1.5, Math.abs(ys.at(s.from) - ys.at(s.to))); return <g key={i}>
@@ -20,7 +21,7 @@ function WaterfallChart({ table, o, compact }) {
 function FunnelChart({ table, o }) {
   const { labels, series } = useMemo(() => categoryData(table.rows), [table.rows]);
   if (!labels.length || !series.length) return <Empty>List the stages in the first column and their counts in the second.</Empty>;
-  const values = series[0].values, max = Math.max(...values, 1), H = 44;
+  const values = series[0].values, max = maximum(values, 1), H = 44;
   return <div className="chart-wrap"><Title o={o}/><svg viewBox={`0 0 640 ${labels.length * H + 10}`} role="img" aria-label="funnel chart">{values.map((v, i) => { const w = 440 * (v / max), x = 320 - w / 2, y = 5 + i * H; return <g key={i}><rect x={x} y={y + 3} width={Math.max(2, w)} height={H - 8} rx="7" fill={color(i)} fillOpacity=".88"><title>{`${labels[i]}: ${v}`}</title></rect><text x={320} y={y + H / 2 + 3} textAnchor="middle" className="chart-funnel-label">{shorten(labels[i], 22)} · {fmt(v)}</text>{i > 0 && values[i - 1] > 0 && <text x={560} y={y + H / 2 + 3} className="chart-axis">{Math.round(v / values[i - 1] * 100)}% →</text>}</g>; })}</svg></div>;
 }
 function GaugeChart({ table, o }) {

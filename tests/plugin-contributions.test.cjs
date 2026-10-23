@@ -97,3 +97,22 @@ test('removing the last picture from a document sticks, and leaving pictures out
  const {images,...withoutPictures}=note;
  assert.equal(saveNoteRecord(note,withoutPictures).images.length,1);
 });
+
+test('site patterns match the host, not text elsewhere in the address, and cannot be made to hang', async () => {
+ const {urlMatches}=await import('../shared/browser-plugins.mjs');
+ assert.ok(urlMatches('https://*.example.com/*','https://docs.example.com/page?x=1'));
+ assert.ok(urlMatches('https://*.example.com/*','https://example.com/'),'the bare site counts as well');
+ assert.ok(!urlMatches('https://*.example.com/*','https://evil.test/x.example.com/y'),'not inside a path');
+ assert.ok(!urlMatches('https://*.example.com/*','https://evil.test/?u=a.example.com/'),'not inside a query');
+ assert.ok(!urlMatches('https://*.example.com/*','https://notexample.com/'),'not a different site that ends the same');
+ assert.ok(!urlMatches('https://*.example.com/*','http://docs.example.com/'),'the scheme must match');
+ assert.ok(urlMatches('*://ads.example.net/*','http://ads.example.net/x.js')&&urlMatches('*://ads.example.net/*','https://ads.example.net/x.js'));
+ assert.ok(urlMatches('*://127.0.0.1:*/ad.js','http://127.0.0.1:8765/ad.js'),'any port');
+ assert.ok(urlMatches('http://localhost:3000/*','http://localhost:3000/a')&&!urlMatches('http://localhost:3000/*','http://localhost:4000/a'),'one port');
+ assert.ok(urlMatches('https://a.com/docs/*/edit','https://a.com/docs/42/edit')&&!urlMatches('https://a.com/docs/*/edit','https://a.com/docs/42/view'));
+ assert.ok(!urlMatches('file:///etc/*','https://a.com/'),'unknown patterns match nothing');
+ const started=Date.now();
+ urlMatches('*://a*a*a*a*a*a*a*a*b/*','https://'+'a'.repeat(100)+'.com/'+'a'.repeat(100));
+ urlMatches('https://x.com/a*a*a*a*a*a*a*a*a*b','https://x.com/'+'a'.repeat(300));
+ assert.ok(Date.now()-started<200,'patterns with many stars finish at once');
+});

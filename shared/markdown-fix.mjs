@@ -46,20 +46,22 @@ export function fixMarkdown(text) {
     let line = lines[i];
     if (FENCE.test(line)) { fenced = !fenced; out.push(line); continue; }
     if (fenced) { out.push(line); continue; }
+    const code = []; line = line.replace(/(`+)(.*?)\1/g, value => { code.push(value); return '\u0000' + (code.length - 1) + '\u0000'; });
+    const restore = value => value.replace(/\u0000(\d+)\u0000/g, (_, i) => code[Number(i)]);
     // <br> tags: a line break in text, a separator inside a table cell.
     line = line.replace(/<br\s*\/?>/gi, /^\s*\|/.test(line) ? ' / ' : '\n');
-    if (line.includes('\n')) { out.push(...fixMarkdown(line).split('\n')); continue; }
+    if (line.includes('\n')) { out.push(...fixMarkdown(restore(line)).split('\n')); continue; }
     if (/^#{1,6}(?=[^#\s])/.test(line)) line = line.replace(/^(#{1,6})/, '$1 ');
     line = line.replace(/^(\s*)[•◦▪●]\s+/, '$1- ');
     if (line.includes('|') && SEPARATOR.test(line)) {
       const rows = splitTableLine(line);
       // A table needs a blank line above it.
       if (rows.length > 1 && out.length && out.at(-1).trim() && !/^\s*\|/.test(out.at(-1))) out.push('');
-      out.push(...rows);
+      out.push(...rows.map(restore));
       continue;
     }
     if (/^\s*\|.*\|\s*$/.test(line) && out.length && out.at(-1).trim() && !/^\s*\|/.test(out.at(-1)) && isTableSeparator(lines[i + 1] || '')) out.push('');
-    out.push(line);
+    out.push(restore(line));
   }
   return out.join('\n');
 }

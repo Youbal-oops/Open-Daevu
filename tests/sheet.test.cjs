@@ -35,3 +35,13 @@ test('Python cancellation and invalid inputs do not mutate the source', async ()
   await new Promise(resolve=>setTimeout(resolve,200));python.stop();await assert.rejects(pending,/stopped/);assert.deepEqual(rows,[['original']]);
   await assert.rejects(python.run({rows,script:' ',command:'python'},os.tmpdir()),/Enter a Python/);
 });
+
+test('a large table of plain text never shows #LIMIT!, while runaway formulas still stop', async () => {
+  const { calculateSheet } = await import('../shared/sheet.mjs');
+  const rows = Array.from({ length: 6000 }, (_, r) => Array.from({ length: 20 }, (_, c) => `v${r}_${c}`));
+  const out = calculateSheet(rows);
+  assert.equal(out[5999][19], 'v5999_19');
+  assert.equal(out.flat().filter(v => v === '#LIMIT!').length, 0);
+  const chain = Array.from({ length: 3000 }, (_, r) => [r === 2999 ? '1' : `=A${r + 2}+1`]);
+  assert.equal(calculateSheet(chain)[0][0], '#LIMIT!', 'a formula chain thousands deep still stops');
+});

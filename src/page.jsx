@@ -25,7 +25,6 @@ const PICKS = [['note', 'Document', FileText, 'Embed a document'], ['sheet', 'Sp
 const NO_TEXT = ['embed', 'divider', 'table', 'metric'], FLOW_TEXT = new Set(['p', 'h1', 'h2', 'h3', 'bullet', 'numbered', 'todo']);
 const block = (type = 'p', text = '', extra = {}) => ({ id: uid(), type, text, ...extra });
 const SHORTCUTS = [[/^# $/, 'h1'], [/^## $/, 'h2'], [/^### $/, 'h3'], [/^[-*] $/, 'bullet'], [/^\[\] $/, 'todo'], [/^> $/, 'quote'], [/^1\. $/, 'numbered'], [/^```$/, 'code']];
-const ICONS = ['📄', '📚', '🚀', '🎯', '💡', '🧠', '📊', '🗂️', '✅', '🔬', '📝', '🌱', '🔥', '⭐', '🧭', '🛠️', '📅', '💼', '🎨', '🔒'];
 const COVERS = [['', 'None'], ['sage', 'Sage'], ['sky', 'Sky'], ['sand', 'Sand'], ['rose', 'Rose'], ['slate', 'Slate'], ['violet', 'Violet']];
 
 function AutoText({ value, onChange, onKeyDown, focus, onFocused, onEnter, onLeave, className, placeholder, ariaLabel }) {
@@ -85,7 +84,7 @@ function FlowEdit({ value, onChange, onKeyDown, focus, onFocused, onEnter, onLea
     onInput={e => { const text = e.currentTarget.textContent; shown.current = text; onChange(text, caretOf(e.currentTarget).start); }} onKeyDown={onKeyDown} onFocus={onEnter} onBlur={onLeave}/>;
 }
 
-export function ProjectPage({ onOpenFile, commentActions, onCopyLink, projectLinks = [], onOpenLink, project, projects, onRefs, act, perform, onOpenNote, onOpenArtifact, onOpenProject, onKpi, onFolder, onStatus, loadFresh }) {
+export function ProjectPage({ onOpenFile, commentActions, onCopyLink, projectLinks = [], onOpenLink, project, projects, onRefs, act, perform, onOpenNote, onOpenArtifact, onOpenProject, onKpi, onFolder, onStatus }) {
   const stored = project.page?.blocks;
   const [picker, setPicker] = useState(null), [blocks, setBlocks] = useState(() => stored?.length ? stored : [block()]), [focus, setFocus] = useState(null), [menu, setMenu] = useState(null), [pick, setPick] = useState(0), [drag, setDrag] = useState(null), [commentsOpen, setCommentsOpen] = useState(false), [commentBlock, setCommentBlock] = useState(null), [editId, setEditId] = useState(null), [images, setImages] = useState(() => project.page?.images || []);
   const dirty = useRef(false), edits = useRef(0), inflight = useRef(0), lastSaved = useRef(project.page?.updatedAt || ''), latest = useRef({ blocks, images, project }); latest.current = { blocks, images, project };
@@ -192,7 +191,7 @@ export function ProjectPage({ onOpenFile, commentActions, onCopyLink, projectLin
   function buildEmbed(b, item) {
     if (!item) return <div className="page-embed missing"><span>This item was deleted.</span><button className="text-button" onClick={() => remove(b.id)}>Remove</button></div>;
     const head = (Icon, label, title, open) => <div className="page-embed-head"><Icon size={15}/><strong>{title}</strong><small>{label}</small><button className="icon-button" aria-label={`Open ${title}`} title="Open" onClick={open}><ArrowUpRight size={15}/></button><button className="icon-button" aria-label="Remove from page" title="Remove from page" onClick={() => remove(b.id)}><Trash2 size={14}/></button></div>;
-    if (b.refType === 'note') return <div className="page-embed">{head(item.kind === 'sheet' ? Table2 : FileText, item.kind === 'sheet' ? 'Spreadsheet' : 'Document', item.title, () => onOpenNote(item.id))}{item.kind === 'sheet' ? <SheetEmbed note={item} h={handlers}/> : <DocEmbed note={item} h={handlers}/>}</div>;
+    if (b.refType === 'note') return <div className="page-embed">{head(item.kind === 'sheet' ? Table2 : FileText, item.kind === 'sheet' ? 'Spreadsheet' : 'Document', item.title, () => onOpenNote(item.id))}{item.kind === 'sheet' ? <SheetEmbed note={item} h={handlers} project={project}/> : <DocEmbed note={item} h={handlers}/>}</div>;
     if (b.refType === 'artifact') { const Icon = kindIcon(item.kind); return <div className="page-embed">{head(Icon, kindName(item.kind), item.title, () => onOpenArtifact(item.id))}{item.kind === 'database' ? <div className="page-embed-art editable"><Database data={item.data} artifactId={item.id} onChange={data => act({ type: 'artifact', projectId: project.id, value: { ...item, data } }).catch(() => {})}/></div> : item.kind === 'kanban' ? <div className="page-embed-art editable"><KanbanBoard data={item.data} onChange={data => act({ type: 'artifact', projectId: project.id, value: { ...item, data } }).catch(() => {})}/></div> : <div className="page-embed-art"><ArtifactPreview artifact={item} project={project}/></div>}</div>; }
     if (b.refType === 'file') return <div className="page-embed file">{head(Paperclip, `${(item.size / 1024).toFixed(1)} KB · ${date(item.createdAt)}`, item.name, () => (onOpenFile ? onOpenFile(project.id, item.id) : perform(() => api.openFile(project.id, item.id))))}</div>;
     return <div className="page-embed file">{head(Folder, 'Work folder', item.name, () => onOpenProject(item.id))}{item.description && <p className="page-embed-note">{item.description}</p>}</div>;

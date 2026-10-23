@@ -1,3 +1,4 @@
+import { minimum, maximum } from '../shared/scale.mjs';
 import React, { useMemo, useState } from 'react';
 import { categoryData } from '../shared/chart-data.mjs';
 import { niceScale, logTicks } from '../shared/scale.mjs';
@@ -37,7 +38,7 @@ function CategoryChart({ kind, table, o, compact }) {
   if (!labels.length || !all.length) return <Empty>Add a header row, labels in the first column, and numbers in the others.</Empty>;
   const series = all.filter(s => !hidden.has(s.name)), { W, H, pad } = layout(compact, o), horizontal = kind === 'bar' && o.horizontal, stacked = o.stacked && series.length > 1;
   const totals = labels.map((_, i) => series.reduce((a, s) => a + s.values[i], 0)), pos = labels.map((_, i) => series.reduce((a, s) => a + Math.max(0, s.values[i]), 0)), neg = labels.map((_, i) => series.reduce((a, s) => a + Math.min(0, s.values[i]), 0));
-  const hi = stacked ? Math.max(...pos, 0) : Math.max(...series.flatMap(s => s.values), 0), lo = stacked ? Math.min(...neg, 0) : Math.min(...series.flatMap(s => s.values), 0);
+  const hi = stacked ? maximum(pos, 0) : maximum(series.flatMap(s => s.values), 0), lo = stacked ? minimum(neg, 0) : minimum(series.flatMap(s => s.values), 0);
   const vs = horizontal ? scale(lo, hi, pad.l, W - pad.r, { zero: true, log: o.logY }) : scale(lo, hi, H - pad.b, pad.t, { zero: true, log: o.logY }), n = labels.length;
   const band = horizontal ? (H - pad.t - pad.b) / n : (W - pad.l - pad.r) / n, along = i => horizontal ? pad.t + band * (i + .5) : pad.l + band * (i + .5), skip = Math.ceil(n / (compact ? 6 : 12));
   const base = vs.at(Math.max(vs.lo, 0)), y = v => vs.at(v);
@@ -76,7 +77,6 @@ function PieChart({ table, o }) {
     <ul className="chart-legend vertical">{labels.map((l, i) => <li key={i}><i style={{ background: color(i) }}/>{l || '—'}<b>{fmt(s.values[i])}</b></li>)}</ul></div>;
 }
 
-export const CHART_KINDS = new Set(['bar', 'line', 'area', 'pie']);
 export function Chart({ kind, table, data = {}, compact = false }) {
   const o = data.options || {};
   if (table.error) return <p className="inline-error">{table.error}</p>;

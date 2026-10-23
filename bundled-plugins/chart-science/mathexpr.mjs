@@ -8,7 +8,7 @@ const FUNCTIONS = {
   gamma: x => { if (x < 0.5) return Math.PI / (Math.sin(Math.PI * x) * FUNCTIONS.gamma(1 - x)); x -= 1; const g = 7, c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7]; let a = c[0]; const t = x + g + 0.5; for (let i = 1; i < g + 2; i++) a += c[i] / (x + i); return Math.sqrt(2 * Math.PI) * t ** (x + 0.5) * Math.exp(-t) * a; },
   erf: x => { const s = Math.sign(x), t = 1 / (1 + 0.3275911 * Math.abs(x)), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return s * y; }
 };
-const FUNCTIONS_2 = { atan2: Math.atan2, pow: Math.pow, mod: (a, b) => a - b * Math.floor(a / b), min: Math.min, max: Math.max, hypot: Math.hypot, nCr: (n, k) => { if (k < 0 || k > n) return 0; let r = 1; for (let i = 1; i <= k; i++) r = r * (n - k + i) / i; return Math.round(r); } };
+const FUNCTIONS_2 = { atan2: Math.atan2, pow: Math.pow, mod: (a, b) => a - b * Math.floor(a / b), min: Math.min, max: Math.max, hypot: Math.hypot, nCr: (n, k) => { if (!Number.isSafeInteger(n) || !Number.isSafeInteger(k) || n < 0) return NaN; if (k < 0 || k > n) return 0; k = Math.min(k, n - k); if (k > 1024) return NaN; let r = 1; for (let i = 1; i <= k; i++) { r *= (n - k + i) / i; if (!Number.isFinite(r)) return NaN; } return Math.round(r); } };
 const CONSTANTS = { pi: Math.PI, e: Math.E, tau: Math.PI * 2, phi: (1 + Math.sqrt(5)) / 2 };
 export const RESERVED = new Set([...Object.keys(FUNCTIONS), ...Object.keys(FUNCTIONS_2), ...Object.keys(CONSTANTS), 'if']);
 

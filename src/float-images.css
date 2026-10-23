@@ -43,6 +43,3 @@ body.picture-dragging *{transition:none!important}
 .doc-undo{position:sticky;top:0;z-index:6;display:flex;gap:2px;width:max-content;margin:0 0 -34px auto;padding:3px;border-radius:10px;background:var(--glass-floating,var(--card));border:1px solid var(--border);box-shadow:0 6px 20px #0004;backdrop-filter:blur(12px)}
 .doc-undo button{width:28px;height:26px;display:grid;place-items:center;border-radius:7px;color:var(--muted)}.doc-undo button:hover:not(:disabled){background:var(--hover);color:var(--text)}.doc-undo button:disabled{opacity:.35}
 .prop-undo{display:inline-flex;gap:2px}.prop-undo .prop-add:disabled{opacity:.35;pointer-events:none}
-.doc-undo{position:sticky;top:0;z-index:6;display:flex;gap:2px;width:max-content;margin:0 0 -34px auto;padding:3px;border-radius:10px;background:var(--glass-floating,var(--card));border:1px solid var(--border);box-shadow:0 6px 20px #0004;backdrop-filter:blur(12px)}
-.doc-undo button{width:28px;height:26px;display:grid;place-items:center;border-radius:7px;color:var(--muted)}.doc-undo button:hover:not(:disabled){background:var(--hover);color:var(--text)}.doc-undo button:disabled{opacity:.35}
-.prop-undo{display:inline-flex;gap:2px}.prop-undo .prop-add:disabled{opacity:.35;pointer-events:none}
