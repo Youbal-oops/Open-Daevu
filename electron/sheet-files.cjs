@@ -4,7 +4,7 @@ const path = require('node:path');
 const XLSX = require('@e965/xlsx');
 const { csvStringify, csvParse, id } = require('../shared/domain.mjs');
 const { calculateSheet, sheetContext } = require('../shared/sheet.mjs');
-const { workbookOf, uniqueName, MAX_SHEETS } = require('../shared/workbook.mjs');
+const { workbookOf, uniqueName, MAX_SHEETS, cleanSheetFields } = require('../shared/workbook.mjs');
 
 const MAX_BYTES = 50 * 1024 * 1024, MAX_ROWS = 10000, MAX_COLUMNS = 256;
 const SPREADSHEET = /\.(xlsx|xlsm|xlsb|xls|ods|fods|csv|tsv|txt|numbers)$/i;
@@ -37,33 +37,47 @@ function rowsOf(sheet) {
 }
 
 // Plain-text tables are read as text so nothing is turned into a number or loses its zeros; the file is UTF-8, or Windows-1252 when it is not.
-function readAny(file) {
+function readAny(file, bytes) {
   const options = { cellDates: true, cellFormula: true, cellStyles: false, sheetRows: MAX_ROWS + 1 };
-  if (!/\.(csv|tsv|txt)$/i.test(file)) return XLSX.readFile(file, options);
-  const bytes = fs.readFileSync(file);
+  if (!/\.(csv|tsv|txt)$/i.test(file)) return bytes ? XLSX.read(bytes, { ...options, type: 'buffer' }) : XLSX.readFile(file, options);
+  bytes ||= fs.readFileSync(file);
   let text = new TextDecoder('utf-8', { fatal: false }).decode(bytes).replace(/^﻿/, '');
   if (text.includes('�')) text = new TextDecoder('windows-1252').decode(bytes);
   return XLSX.read(text, { ...options, type: 'string', raw: true, FS: /\.tsv$/i.test(file) ? '	' : undefined });
 }
 
 // Every sheet of the file, as { name, rows }.
-function readWorkbook(file) {
-  const size = fs.statSync(file).size;
+function readWorkbook(file, bytes) {
+  const size = bytes ? bytes.length : fs.statSync(file).size;
   if (size > MAX_BYTES) throw new Error('Import spreadsheets under 50 MB.');
-  const workbook = readAny(file);
+  const workbook = readAny(file, bytes);
   if (!workbook.SheetNames.length) throw new Error('That file has no sheets.');
-  return workbook.SheetNames.slice(0, MAX_SHEETS).map(name => ({ name, rows: rowsOf(workbook.Sheets[name]) }));
+  if (workbook.SheetNames.length > MAX_SHEETS) throw new Error(`This workbook has more than ${MAX_SHEETS} sheets. Split it before importing; no sheets were imported.`);
+  return workbook.SheetNames.map(name => {
+    const sheet = workbook.Sheets[name], range = XLSX.utils.decode_range(sheet['!fullref'] || sheet['!ref'] || 'A1');
+    if (range.e.r - range.s.r + 1 > MAX_ROWS || range.e.c - range.s.c + 1 > MAX_COLUMNS) throw new Error(`Sheet "${name}" exceeds the import limit (${MAX_ROWS} rows, ${MAX_COLUMNS} columns). Split it before importing; no cells were imported.`);
+    const rows = rowsOf(sheet), formulaCache = {};
+    for (let r = 0; r < rows.length; r++) for (let c = 0; c < rows[r].length; c++) {
+      const cell = sheet[XLSX.utils.encode_cell({ r: range.s.r + r, c: range.s.c + c })];
+      if (cell?.f && ['n', 's', 'b'].includes(cell.t) && cell.v != null) formulaCache[XLSX.utils.encode_cell({ r, c })] = { formula: '=' + cell.f, value: cell.v };
+    }
+    return { name, rows, ...(Object.keys(formulaCache).length ? { formulaCache } : {}) };
+  });
 }
 
 // A new spreadsheet note holding those sheets.
 function noteFromSheets(title, sheets, position) {
   const named = [];
-  for (const sheet of sheets) named.push({ id: named.length ? id() : 'main', name: uniqueName(named, sheet.name), content: csvStringify(sheet.rows) });
+  for (const sheet of sheets) named.push({ id: named.length ? id() : 'main', name: uniqueName(named, sheet.name), content: csvStringify(sheet.rows), ...(sheet.formulaCache ? { formulaCache: sheet.formulaCache } : {}) });
+  if (!named.length) throw new Error('That file has no sheets.');
+  if (named.some(s => s.content.length > 2000000)) throw new Error('Each imported sheet must fit within 2,000,000 characters. Split the workbook before importing; nothing was imported.');
   const [first, ...rest] = named, now = new Date().toISOString();
-  return { id: id(), title: String(title).slice(0, 160), kind: 'sheet', content: first.content, sheetName: first.name, ...(rest.length ? { sheets: rest } : {}), author: 'You', createdAt: now, updatedAt: now, position };
+  const note = { id: id(), title: String(title).slice(0, 160), kind: 'sheet', content: first.content, sheetName: first.name, ...(first.formulaCache ? { formulaCache: first.formulaCache } : {}), ...(rest.length ? { sheets: rest } : {}), author: 'You', createdAt: now, updatedAt: now, position };
+  cleanSheetFields(note);
+  return note;
 }
-function importFile(file, position) {
-  return noteFromSheets(path.basename(file).replace(/\.[^.]+$/, '') || 'Imported spreadsheet', readWorkbook(file), position);
+function importFile(file, position, bytes) {
+  return noteFromSheets(path.basename(file).replace(/\.[^.]+$/, '') || 'Imported spreadsheet', readWorkbook(file, bytes), position);
 }
 
 // Excel sheet names are at most 31 characters, cannot hold / \ ? * [ ] : and must differ from each other without regard to case.

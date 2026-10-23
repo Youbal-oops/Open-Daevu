@@ -17,9 +17,9 @@ Daevu is for people who want their project notes, source files, planning and sma
 
 ## Project status
 
-The core feature set is complete. Development is focused on bug fixes, performance, reliability and compatibility. New functionality should primarily be built as plugins or project apps; changes to core extension APIs can be discussed when needed.
+The core feature set is complete. Development now focuses on bug fixes, performance, reliability, compatibility and security hardening. New functionality should primarily be built as plugins or project apps, with changes to core extension APIs discussed when needed.
 
-The initial development as roughly six weeks, beginning privately before this public repository was created. Public Git history starts with the 1.0.0 commit on 20 October 2026; it does not represent the full private development period. The project was developed with extensive AI coding assistance. That assistance is part of its history, not a substitute for reviewing changes or recording what was actually tested.
+I started developing Daevu privately on 4 September 2026. This repository is its public release; public Git history begins with the 1.0.0 commit on 20 October 2026 and does not include the earlier private development. The code was written with AI, and I extensively reviewed and tested it before release. Ongoing fixes and verification results are documented as development continues.
 
 ## Install
 

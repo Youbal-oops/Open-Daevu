@@ -23,6 +23,7 @@ fs.writeFileSync(path.join(pictureDir, 'pic1.png'), picture);
 state.projects[0].files = [{ id: 'pic1', name: 'Photo.png', storedName: 'pic1.png', size: picture.length, createdAt: new Date().toISOString(), position: { x: 0, y: 0 } }];
 state.projects[0].files.push({ ...state.projects[0].files[0], id: 'hidden', name: 'Inline.png', storedName: 'hidden.png', inline: true });
 fs.writeFileSync(path.join(pictureDir, 'hidden.png'), picture);
+state.projects[0].notes[0].images = [{ id: 'flow-picture', fileId: 'hidden', name: 'Inline.png', x: 400, y: 200, w: 120, h: 80, wrap: 'around' }];
 fs.writeFileSync(path.join(root, 'workspace', 'workspace.json'), JSON.stringify(state));
 const timer = setTimeout(() => { console.error('smoke test timed out'); app.exit(1); }, 150000);
 dialog.showErrorBox = (title, message) => { console.error(title + ': ' + message); app.exit(1); };
@@ -38,6 +39,12 @@ app.once('browser-window-created', (_event, window) => {
     const results = {};
     try {
       await wait("!!document.querySelector('.sidebar')", 'app shell');
+      const readPicture = await run("window.workspace.readFile('research-project', 'pic1').then(bytes => Array.from(bytes))");
+      assert.ok(Buffer.from(readPicture).equals(picture), 'preload reassembles native preview chunks without changing bytes');
+      const importCsv = path.join(root, 'worker.csv'); fs.writeFileSync(importCsv, 'Code,Qty\n00123,42');
+      const imported = await require(path.join(repo, 'electron/imports.cjs')).importDocument('sheet', importCsv, {});
+      assert.equal(imported.content, 'Code,Qty\n00123,42', 'document worker runs under the actual Electron runtime');
+      results.fileTransport = 'native preview chunk and Electron import worker passed';
       assert.equal(await run("document.querySelector('.workspace-nav').hidden"), true, 'the Workspace section starts collapsed');
       assert.ok(await run("!!document.querySelector('.titlebar .nav-island')"), 'our own title bar is shown');
       const resizeState = await run(`(() => {
@@ -79,6 +86,16 @@ app.once('browser-window-created', (_event, window) => {
       const typeIn = (selector, text) => run(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); el.focus(); el.textContent = ${JSON.stringify(text)}; el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
       const shortcut = (selector, init) => run(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); el.focus(); document.execCommand('selectAll'); el.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ bubbles: true, cancelable: true }, ${JSON.stringify(init)}))); })()`);
       const lastText = '.doc-block:last-child .doc-text, .doc-blocks .doc-block:nth-last-child(2) .doc-text';
+      await pause(450);
+      await run("window.flowReads = 0; window.originalRect = HTMLElement.prototype.getBoundingClientRect; HTMLElement.prototype.getBoundingClientRect = function() { if (this.matches('[data-flow]') && this.closest('.flow-measuring')) window.flowReads++; return window.originalRect.call(this); }; undefined");
+      for (let n = 0; n < 3; n++) { await typeIn(lastText, 'Typing burst ' + n); await pause(25); }
+      const duringTyping = await run('window.flowReads');
+      await pause(250);
+      const afterTyping = await run('window.flowReads');
+      await run('HTMLElement.prototype.getBoundingClientRect = window.originalRect; delete window.originalRect');
+      assert.equal(duringTyping, 0, 'typing does not synchronously measure document rows for picture layout');
+      assert.ok(afterTyping > 0, 'picture flow is measured after typing pauses');
+      results.pictureFlow = 'layout deferred until typing pauses';
       await typeIn(lastText, 'Typed in a block');
       await shortcut(lastText, { key: 'b', ctrlKey: true });
       await wait("!!document.querySelector('.doc-blocks .doc-text b')", 'Ctrl+B makes the selection bold');

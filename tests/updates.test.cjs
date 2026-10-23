@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const { Updates, compareVersions, pickAsset, trusted } = require('../electron/updates.cjs');
+const digest = body => 'sha256:' + require('node:crypto').createHash('sha256').update(body).digest('hex');
 
 test('versions compare numerically', () => {
   assert.equal(compareVersions('v1.0.2', '1.0.1'), 1);
@@ -21,7 +22,7 @@ test('the right installer is chosen, and only GitHub downloads are trusted', () 
   assert.equal(trusted('https://evil.example/github.com'), false);
 });
 
-const release = (tag, size = 5) => ({ tag_name: tag, body: 'Notes', html_url: 'https://github.com/r', assets: [{ name: 'Daevu-Setup.exe', size, browser_download_url: 'https://github.com/a/Daevu-Setup.exe' }] });
+const release = (tag, size = 5) => ({ tag_name: tag, body: 'Notes', html_url: 'https://github.com/r', assets: [{ name: `Daevu-${tag.replace(/^v/, '')}-x64-Setup.exe`, size, digest: digest('abcde'), browser_download_url: 'https://github.com/a/Daevu-Setup.exe' }] });
 const json = body => ({ ok: true, status: 200, json: async () => body });
 const make = (version, fetch) => { const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'upd-')); return { updates: new Updates({ version, userData: dir, downloads: path.join(dir, 'dl'), fetch }), dir }; };
 const file = (size, chunks) => async url => url.includes('api.github') ? json(release('v1.0.2', size)) : { ok: true, status: 200, headers: { get: () => String(size) }, body: (async function* () { yield* chunks; })() };
@@ -62,4 +63,39 @@ test('a download is forgotten when a newer release appears, and kept for the sam
   const next = await updates.check();
   assert.equal(next.available.version, '1.0.3');
   assert.equal(next.downloaded, null, 'the older installer is not offered for the newer release');
+});
+
+test('unknown installers and installers for a different release are not selected', () => {
+  const asset = name => ({ name, browser_download_url: 'https://github.com/a/file.exe' });
+  assert.equal(pickAsset([asset('Other.exe')], false), null);
+  assert.equal(pickAsset([asset('Daevu-1.0.2-x64-Portable.exe')], false), null);
+  assert.equal(pickAsset([asset('Daevu-1.0.2-x64-Setup.exe')], false, 'v1.0.3'), null);
+});
+
+test('missing or mismatched checksums cannot produce an installable update', async () => {
+  for (const checksum of [undefined, digest('wrong')]) {
+    const { updates, dir } = make('1.0.1', async url => url.includes('api.github') ? json({ ...release('v1.0.2'), assets: release('v1.0.2').assets.map(a => ({ ...a, digest: checksum })) }) : { ok: true, body: (async function* () { yield Buffer.from('abcde'); })(), headers: { get: () => '5' } });
+    await updates.check();
+    await assert.rejects(updates.download(), /SHA-256|checksum/);
+    assert.equal(updates.state.downloaded, null);
+    if (fs.existsSync(path.join(dir, 'dl'))) assert.deepEqual(fs.readdirSync(path.join(dir, 'dl')), []);
+  }
+});
+
+test('double-clicking download shares one writer, and install rechecks bytes on disk', async () => {
+  let downloads = 0;
+  const { updates } = make('1.0.1', async url => {
+    if (url.includes('api.github')) return json(release('v1.0.2'));
+    downloads++;
+    return { ok: true, headers: { get: () => '5' }, body: (async function* () { yield Buffer.from('abcde'); })() };
+  });
+  await updates.check();
+  const first = updates.download(), second = updates.download();
+  assert.equal(first, second);
+  const target = await first;
+  assert.equal(downloads, 1);
+  assert.equal(await updates.verifyDownloaded(), target);
+  fs.writeFileSync(target, 'other');
+  await assert.rejects(updates.verifyDownloaded(), /checksum changed/);
+  assert.equal(updates.state.downloaded, null);
 });

@@ -1,6 +1,7 @@
 import { minimum, maximum } from '../shared/scale.mjs';
 import React, { useMemo, useState } from 'react';
 import { categoryData } from '../shared/chart-data.mjs';
+import { chartRenderError } from '../shared/chart-limits.mjs';
 import { niceScale, logTicks } from '../shared/scale.mjs';
 
 export const PALETTE = ['#6aa6d8', '#7fb08e', '#dba46b', '#a98fd1', '#e08b9c', '#6fc0bb', '#d4bd5a', '#8a9be0', '#c57b57', '#9aaa6c'];
@@ -80,6 +81,8 @@ function PieChart({ table, o }) {
 export function Chart({ kind, table, data = {}, compact = false }) {
   const o = data.options || {};
   if (table.error) return <p className="inline-error">{table.error}</p>;
+  const limitError = chartRenderError(table.rows);
+  if (limitError) return <p className="inline-error">{limitError}</p>;
   const props = { table, o, compact };
   switch (kind) {
     case 'bar': case 'line': case 'area': return <CategoryChart kind={kind} {...props}/>;

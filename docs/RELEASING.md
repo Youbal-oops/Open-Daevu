@@ -20,7 +20,7 @@ npm run dist:win
 ```
 
 4. Launch both generated installer and portable builds in a disposable Windows profile/VM. Open a project; edit and reopen a document; install a bundled chart plugin and open a chart; open a project app. Check ASAR/esbuild behavior and that the expected files are packaged. Record which Windows versions were actually tested. Unit/development checks do not prove packaged behavior.
-5. Check version labels, asset names, license/trademark notices, and the absence of credentials/private workspace data. Generate SHA-256 checksums for the release assets and publish them with the release; do not claim the current in-app updater verifies them. It currently checks size only.
+5. Check version labels, asset names, license/trademark notices, and the absence of credentials/private workspace data. Generate SHA-256 checksums for the release assets and publish them with the release. The current source updater requires the matching GitHub release asset's `sha256:` digest, verifies downloaded bytes and checks them again before installation. Verify that GitHub exposes that digest after upload; releases without it require a manual download. This is integrity checking against GitHub metadata, not publisher code signing. Older published binaries may still use size-only verification.
 
 ## Commit, tag and publish
 

@@ -18,6 +18,7 @@ test('a Word document becomes Markdown with headings and bold text', async () =>
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'word-')), 'Plan.docx');
   await makeDocx(file);
   assert.equal(await wordToMarkdown(file), '# Quarterly plan\n\nPlain and **bold** text.');
+  assert.equal(await require('../electron/imports.cjs').importDocument('word', file), '# Quarterly plan\n\nPlain and **bold** text.');
 });
 test('only Word file names are converted', () => {
   for (const name of ['a.docx', 'b.DOC', 'c.docm']) assert.ok(WORD.test(name));
