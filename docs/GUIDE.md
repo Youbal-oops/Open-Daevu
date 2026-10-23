@@ -1,4 +1,3 @@
-<!-- Youbal said to fix: update navigation, format limits, storage behavior and current-versus-historical claims. -->
 # Guide
 
 This guide describes the public source version in [package.json](../package.json). Version labels retained in section headings identify when a capability was introduced, not the current release. Earlier test reports and private-development notes are preserved in [VALIDATION.md](../VALIDATION.md).

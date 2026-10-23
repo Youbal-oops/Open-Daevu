@@ -1,4 +1,3 @@
-<!-- Youbal said to fix: clarify project scope, installation, integrations, limitations and development history. -->
 <p align="center">
   <img src="docs/assets/hero.svg" alt="Daevu: projects, a canvas, a calendar and optional agents" width="900">
 </p>

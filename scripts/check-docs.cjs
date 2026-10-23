@@ -1,4 +1,3 @@
-// Youbal said to fix: add dependency-free local documentation checks.
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');

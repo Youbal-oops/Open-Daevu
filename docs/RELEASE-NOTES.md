@@ -1,4 +1,3 @@
-<!-- Youbal said to fix: preserve published release history while distinguishing it from current guarantees. -->
 # Release context
 
 The original GitHub release notes and tags remain unchanged. This index records the public releases inspected on 23 October 2026; it is not a new release announcement. The source version is in [package.json](../package.json).

@@ -1,4 +1,3 @@
-<!-- Youbal said to fix: document sensitive reporting and the source's actual trust boundaries. -->
 # Security
 
 ## Report a vulnerability

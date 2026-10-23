@@ -1,4 +1,3 @@
-# Youbal said to fix: collect reproducible bug reports without private workspace data.
 name: Bug report
 description: Report an error or unexpected behavior in Daevu.
 labels: [bug]

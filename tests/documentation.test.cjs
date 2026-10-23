@@ -1,4 +1,3 @@
-// Youbal said to fix: cover broken links, fragments, path case and fenced examples.
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');

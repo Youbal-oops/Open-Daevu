@@ -1,4 +1,3 @@
-<!-- Youbal said to fix: make the repository structure, checks and documentation ownership maintainable. -->
 # Development
 
 Use Windows x64 and Node.js 24, as in [the Windows workflow](../.github/workflows/windows.yml). Clone the repository and run `npm ci`; the committed lockfile records dependencies. This audit did not establish compatibility with every Node or Windows version.
@@ -42,6 +41,8 @@ Some native scripts require a Windows desktop session. Read a script before runn
 The app packages the allowlisted runtime paths in `package.json`, not the entire repository. Check packaging separately from development behavior; esbuild's ASAR path and bundled plugins are packaging-sensitive.
 
 ## Documentation ownership
+
+[AGENTS.md](../AGENTS.md) gives repository-wide instructions for AI agents, including the required manual user review before every commit.
 
 - [README](../README.md): purpose, status, installation and entry points.
 - [Guide](GUIDE.md): current usage, limits and app SDK procedures.

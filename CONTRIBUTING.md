@@ -1,4 +1,3 @@
-<!-- Youbal said to fix: add contribution priorities, reproducible checks and honest AI-assistance guidance. -->
 # Contributing
 
 Daevu's core feature set is complete. The priorities are bug fixes, performance, reliability and compatibility. Prefer plugins and project apps for new functionality. Open an issue before a substantial core/API change so its scope can be discussed.
@@ -29,7 +28,7 @@ See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for additional native checks. A passin
 
 Extensive AI coding assistance was used to build Daevu. AI-assisted contributions are welcome; there is no need to disguise their origin. Describe assistance when it affects review, and check the resulting diff, dependencies and behavior. Do not submit invented test results, source citations, contributors or claims of personal review.
 
-Attribute a requested correction to its actual requester. This repository-cleanup request is recorded as **“Youbal said to fix”** in its audit and commit. That attribution records the request; it does not claim Youbal personally performed the code review or tests.
+AI agents must follow [AGENTS.md](AGENTS.md). Before any commit, provide the final diff, changed-file summary and actual verification results, then wait for explicit approval from the user who requested the work. A task request or an earlier approval is not approval of a new diff. Leave changes uncommitted until that review is complete.
 
 ## Repository conventions
 

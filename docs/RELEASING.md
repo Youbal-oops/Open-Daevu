@@ -1,4 +1,3 @@
-<!-- Youbal said to fix: separate release procedure from test evidence and correct manual workflow behavior. -->
 # Releasing
 
 This is a checklist for a future release, not a claim that a build has passed it. Record the commit, environment, commands, failures and results for each release. Keep existing commits, tags and binaries unchanged.

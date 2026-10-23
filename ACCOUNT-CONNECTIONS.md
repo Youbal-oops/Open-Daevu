@@ -1,4 +1,3 @@
-<!-- Youbal said to fix: current connection navigation, tools, voice scope and verification limits. -->
 # Account connections
 
 Open **Connections** from the profile menu under your name, or **Settings → Agents → Connections → Manage**. Account support originated during private development; this guide describes the current source. Then choose a connection and model in an agent profile. Projects, work folders, notes, handoffs, and scheduled tasks use that profile's saved connection.

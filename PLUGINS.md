@@ -1,4 +1,3 @@
-<!-- Youbal said to fix: distinguish plugin storage, permissions and sandbox types; remove stale release status. -->
 # Workspace plugins
 
 Plugins are optional extensions to Daevu. In local mode they are stored in the device profile; with a Drive workspace the package registry, settings and plugin SDK storage are stored in that workspace’s `plugins/` folder. Website cookies/sign-ins remain device-local. They are separate from agent profiles and MCP connections. Open **Plugins** from the profile menu to install either **ChatGPT** or **Gemini** independently, or install a custom folder/ZIP or public GitHub repository. Review its permissions before installation. The sidebar shows up to three enabled plugins; the Plugins menu lists everything installed. Disable closes its native web panels; uninstall removes its package and plugin settings, while project files and database records remain.

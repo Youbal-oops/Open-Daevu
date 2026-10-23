@@ -1,7 +1,6 @@
-<!-- Youbal said to fix: record evidence, corrections, request attribution and actual verification limits. -->
 # Public repository audit — 23 October 2026
 
-**Request attribution: Youbal said to fix** the public-facing documentation, consistency and repository hygiene. This records who requested the work; it does not claim Youbal personally reviewed code or ran tests. The cleanup used AI assistance, including source inspection and automated checks.
+This audit reviews public-facing documentation, consistency and repository hygiene. It used AI assistance, source inspection and automated checks. Source evidence and actual test results are recorded below; they do not imply that the maintainer personally performed those checks.
 
 ## Scope and baseline
 
@@ -34,7 +33,7 @@ The [release context](RELEASE-NOTES.md) also distinguishes export-time formula-n
 
 ## Change ledger
 
-Each row records a change **Youbal said to fix**. Attribution comments are present in the edited/new text and tooling files; JSON cannot contain comments, so `package.json` is attributed here and in the commit.
+The table records the files changed in the documentation cleanup and the purpose of each change.
 
 | Files | Change |
 | --- | --- |
@@ -47,6 +46,7 @@ Each row records a change **Youbal said to fix**. Attribution comments are prese
 | [SECURITY](../SECURITY.md), [.gitignore](../.gitignore) | Reporting fallback, trust boundaries and local credential/profile/signing exclusions |
 | [Issue templates](../.github/ISSUE_TEMPLATE), [PR template](../.github/pull_request_template.md) | Environment/reproduction/timing details, sensitive-data guidance and review evidence |
 | [Checker](../scripts/check-docs.cjs), [checker tests](../tests/documentation.test.cjs), [docs workflow](../.github/workflows/docs.yml), [package script](../package.json) | Dependency-free local link/case/heading checks and version consistency, run on PRs |
+| [Agent instructions](../AGENTS.md) | Repository-wide guidelines and explicit manual user review before every AI-created commit |
 | This report | Source evidence, scope, actual results, outstanding concerns and limits |
 
 No production implementation, license/trademark text, visual asset, release binary or generated distribution file was changed. Build icons/installer sources and documentation images/video are intentional tracked assets and were retained.
@@ -63,7 +63,7 @@ GitHub's private vulnerability-reporting API returned **enabled: false** on 23 O
 
 ## Verification
 
-All commands below ran in this branch/worktree on Windows with Node.js 24.12.0 and the existing installed dependencies. A fresh `npm ci` was not run.
+The initial cleanup commands below ran in this branch/worktree on Windows with Node.js 24.12.0 and the existing installed dependencies. A fresh `npm ci` was not run. These results describe that revision; the agent-guidance follow-up is recorded separately below.
 
 | Check | Actual result |
 | --- | --- |
@@ -88,3 +88,9 @@ Documentation checks cover local targets, path case for GitHub/Linux compatibili
 - Official OpenAI sign-in and CLI references were opened during the audit. Their documented flows are not evidence that any particular account is eligible. Live Google/Claude/MCP consent, paid inference, website composer/voice behavior and every custom API were not tested.
 - Historic validation entries are reports from prior work, not independent proof of every claimed milestone. The private six-week timeline is explicitly attributed to Youbal.
 - [Third-party notices](../THIRD-PARTY-NOTICES.md) remain unchanged; `npm ls --all` displays the package tree, not a complete legal compliance report. A deeper license inventory and binary/media metadata review are separate work.
+
+## Agent-guidance follow-up
+
+The follow-up removes requester-attribution labels from the current files and introduces [AGENTS.md](../AGENTS.md) as the repository-wide AI-agent policy. CONTRIBUTING, DEVELOPMENT and the PR template link or reinforce the policy. It requires the requesting user to review the final diff and explicitly approve it before any AI-created commit, including documentation or tooling changes. These edits remain uncommitted pending that review; existing commits and tags are unchanged.
+
+For this follow-up, `npm run check:docs` passed and both documentation-check regression tests passed. `git diff --check` passed. The application suite and build were not rerun for comment removal and documentation-only policy edits; the 300-test/build results above belong to the initial cleanup revision.

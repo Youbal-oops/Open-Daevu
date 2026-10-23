@@ -1,4 +1,3 @@
-# Youbal said to fix: request measurements and data scale for performance reports.
 name: Performance problem
 description: Report slow startup, editing, imports or excessive resource use.
 labels: [bug]

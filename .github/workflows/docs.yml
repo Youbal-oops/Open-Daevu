@@ -1,4 +1,3 @@
-# Youbal said to fix: check documentation links on PRs without installing app dependencies.
 name: Check documentation
 on:
   pull_request:

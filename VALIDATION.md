@@ -1,4 +1,3 @@
-<!-- Youbal said to fix: label historical validation without rewriting or deleting the original records. -->
 # Historical validation records
 
 The original records below are preserved as written. They describe earlier development snapshots, including private pre-1.0 versions, and are not a current test report. “Unreleased” and statements about build/push/tag automation refer to the context in which each note was written; they are not current release status. Public releases start at 1.0.0, and the current Windows workflow is manually dispatched.
