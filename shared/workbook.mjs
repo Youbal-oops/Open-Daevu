@@ -11,12 +11,12 @@ const ALL_OPS = new Set(Object.values(FILTER_OPS).flat().map(([op]) => op));
 const NO_VALUE = new Set(['empty', 'notEmpty']);
 
 export function workbookOf(note) {
-  return [{ id: 'main', name: note.sheetName || 'Sheet 1', content: note.content || '', filters: note.filters || null }, ...(note.sheets || []).map(s => ({ id: s.id, name: s.name, content: s.content || '', filters: s.filters || null }))];
+  return [{ id: 'main', name: note.sheetName || 'Sheet 1', content: note.content || '', filters: note.filters || null, formulaCache: note.formulaCache }, ...(note.sheets || []).map(s => ({ id: s.id, name: s.name, content: s.content || '', filters: s.filters || null, formulaCache: s.formulaCache }))];
 }
 // The note fields that hold a list of sheets, from the list.
 export function fieldsOf(list) {
   const [first, ...rest] = list;
-  return { content: first.content, sheetName: first.name, filters: first.filters || undefined, sheets: rest.length ? rest.map(s => ({ id: s.id, name: s.name, content: s.content, ...(s.filters ? { filters: s.filters } : {}) })) : undefined };
+  return { content: first.content, sheetName: first.name, filters: first.filters || undefined, formulaCache: first.formulaCache, sheets: rest.length ? rest.map(s => ({ id: s.id, name: s.name, content: s.content, ...(s.filters ? { filters: s.filters } : {}), ...(s.formulaCache ? { formulaCache: s.formulaCache } : {}) })) : undefined };
 }
 export function uniqueName(list, wanted) {
   const base = String(wanted || 'Sheet').trim().slice(0, 60) || 'Sheet', taken = new Set(list.map(s => s.name.toLowerCase()));
@@ -36,6 +36,17 @@ export function cleanFilter(filter) {
 // Validated sheet fields of a note being saved. Throws on bad data.
 export function cleanSheetFields(incoming, limit = 2000000) {
   const out = {};
+  const cleanCache = value => {
+    if (value == null) return undefined;
+    if (typeof value !== 'object' || Array.isArray(value) || JSON.stringify(value).length > limit) throw new Error('Invalid imported formula cache.');
+    const cache = {};
+    for (const [ref, entry] of Object.entries(value)) {
+      if (!/^[A-Z]{1,3}[1-9]\d{0,4}$/.test(ref) || typeof entry?.formula !== 'string' || !entry.formula.startsWith('=') || entry.formula.length > 4001 || !['string', 'number', 'boolean'].includes(typeof entry.value) || (typeof entry.value === 'number' && !Number.isFinite(entry.value))) throw new Error('Invalid imported formula cache.');
+      cache[ref] = { formula: entry.formula, value: entry.value };
+    }
+    return cache;
+  };
+  const formulaCache = cleanCache(incoming.formulaCache); if (formulaCache) out.formulaCache = formulaCache;
   if (incoming.sheetName != null) { const name = String(incoming.sheetName).trim().slice(0, 60); if (name) out.sheetName = name; }
   const filters = cleanFilter(incoming.filters); if (filters && filters.rules.length) out.filters = filters;
   if (incoming.sheets != null) {
@@ -47,7 +58,8 @@ export function cleanSheetFields(incoming, limit = 2000000) {
       if (!name || seen.has(name.toLowerCase())) throw new Error('Give each sheet its own name.');
       seen.add(name.toLowerCase());
       const filter = cleanFilter(s.filters);
-      sheets.push({ id: s.id, name, content: s.content, ...(filter && filter.rules.length ? { filters: filter } : {}) });
+      const formulaCache = cleanCache(s.formulaCache);
+      sheets.push({ id: s.id, name, content: s.content, ...(filter && filter.rules.length ? { filters: filter } : {}), ...(formulaCache ? { formulaCache } : {}) });
     }
     if (sheets.length) out.sheets = sheets;
   }
@@ -106,8 +118,9 @@ export function projectFiles(notes, parse, exceptId) {
   for (const note of notes || []) {
     if (note.kind !== 'sheet' || note.id === exceptId) continue;
     const book = workbookOf(note), sheets = {};
-    for (const s of book) { let rows; sheets[s.name.toLowerCase()] = () => rows ||= parse(s.content); }
+    for (const s of book) { let rows; const get = () => rows ||= parse(s.content); get.formulaCache = s.formulaCache; sheets[s.name.toLowerCase()] = get; }
     files[String(note.title).trim().toLowerCase()] = { sheets, first: book[0].name.toLowerCase() };
+    files[String(note.id).toLowerCase()] = { sheets, first: book[0].name.toLowerCase() };
   }
   return files;
 }
@@ -119,9 +132,10 @@ export function projectSheetContext(note, notes, parse, name) {
 
 export function stableSheetSources(notes, previous = []) {
   const next = (notes || []).filter(note => note.kind === 'sheet');
-  const sameTabs = (a = [], b = []) => a.length === b.length && a.every((sheet, i) => sheet.id === b[i].id && sheet.name === b[i].name && sheet.content === b[i].content);
+  const sameCache = (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b);
+  const sameTabs = (a = [], b = []) => a.length === b.length && a.every((sheet, i) => sheet.id === b[i].id && sheet.name === b[i].name && sheet.content === b[i].content && sameCache(sheet.formulaCache, b[i].formulaCache));
   return next.length === previous.length && next.every((note, i) => {
     const before = previous[i];
-    return note.id === before.id && note.title === before.title && note.content === before.content && note.sheetName === before.sheetName && sameTabs(note.sheets, before.sheets);
+    return note.id === before.id && note.title === before.title && note.content === before.content && note.sheetName === before.sheetName && sameCache(note.formulaCache, before.formulaCache) && sameTabs(note.sheets, before.sheets);
   }) ? previous : next;
 }

@@ -291,8 +291,7 @@ app.whenReady().then(async () => {
   handle('update:page', () => { const page = updates.state.available?.page; if (/^https:\/\/github\.com\//.test(page || '')) return shell.openExternal(page); });
   // A setup program is started and Daevu closes so it can be replaced; a portable copy is shown in its folder instead.
   handle('update:install', async () => {
-    const file = updates.state.downloaded;
-    if (!file || !nodeFs.existsSync(file)) throw new Error('Download the update first.');
+    const file = await updates.verifyDownloaded();
     if (updates.portable) { shell.showItemInFolder(file); return; }
     const failure = await shell.openPath(file);
     if (failure) throw new Error(failure);
@@ -339,27 +338,15 @@ app.whenReady().then(async () => {
     await storage.assertWritable();
     if (action.type === 'settings' && 'launchAtLogin' in action.value) applyStartup({ ...store.state.settings, ...action.value });
     if(action.type==='agent' && action.value.connectionId){const account=requireAccounts().account(action.value.connectionId);if(account.provider!==action.value.provider)throw new Error('Choose an account for this provider.');}
+    if (['item:move', 'item:copy'].includes(action.type)) return require('./item-transfer.cjs').transferItem(store, action);
     const dirOf = projectId => path.join(store.root, 'projects', projectId);
     const trashBefore = store.state.trash || [];
-    const moving = action.type === 'item:move' && action.value?.kind === 'file' ? store.state.projects.find(p => p.id === action.projectId)?.files.find(f => f.id === action.value.id) : null;
-    const copying = action.type === 'item:copy' && action.value?.kind === 'file' ? store.state.projects.find(p => p.id === action.value.fromProjectId)?.files.find(f => f.id === action.value.id) : null;
-    let copied = null;
-    if (copying?.storedName && /^[a-zA-Z0-9-]+$/.test(action.value.newId || '')) {
-      copied = path.join(store.projectDir(action.projectId), 'files', action.value.newId + path.extname(copying.storedName).toLowerCase());
-      await fs.mkdir(path.dirname(copied), { recursive: true });
-      await fs.copyFile(path.join(store.projectDir(action.value.fromProjectId), 'files', path.basename(copying.storedName)), copied);
-    }
-    let next;
-    try { next = await store.mutate(action); } catch (error) { if (copied) fs.rm(copied, { force: true }).catch(() => {}); throw error; }
+    const next = await store.mutate(action);
     const kept = new Set((store.state.trash || []).map(e => e.id));
     for (const gone of trashBefore) {
       if (kept.has(gone.id) || (action.type === 'trash:restore' && action.value === gone.id)) continue;
       if (gone.kind === 'file' && gone.item?.storedName) fs.rm(path.join(dirOf(gone.projectId), 'files', path.basename(gone.item.storedName)), { force: true }).catch(() => {});
       if (gone.kind === 'project') for (const p of gone.projects) if (/^[a-zA-Z0-9-]+$/.test(p.id) && !store.state.projects.some(x => x.id === p.id)) fs.rm(dirOf(p.id), { recursive: true, force: true }).catch(() => {});
-    }
-    if (moving?.storedName) {
-      const name = path.basename(moving.storedName), from = path.join(dirOf(action.projectId), 'files', name), to = path.join(dirOf(action.value.toProjectId), 'files', name);
-      try { await fs.mkdir(path.dirname(to), { recursive: true }); await fs.rename(from, to); } catch { try { await fs.copyFile(from, to); await fs.rm(from, { force: true }); } catch {} }
     }
     return next;
   };
@@ -478,15 +465,15 @@ app.whenReady().then(async () => {
       // Keep the original Word upload alongside its editable Markdown conversion.
       if (/\.(docx|docm|dotx|dotm|doc)$/i.test(source)) {
         try {
-          const content = await require('./doc-convert.cjs').wordToMarkdown(source), at = existingNotes + notes.length, now = new Date().toISOString();
+          const content = await require('./imports.cjs').importDocument('word', source), at = existingNotes + notes.length, now = new Date().toISOString();
           notes.push({ id: id(), title: path.basename(source).replace(/\.[^.]+$/, '').slice(0, 160), content, kind: 'note', author: 'You', createdAt: now, updatedAt: now, position: { x: 80 + at % 3 * 350, y: 90 + Math.floor(at / 3) * 280 } });
-        } catch {}
+        } catch (error) { await dialog.showMessageBox(window, { type: 'warning', message: 'The original Word file will be kept, but its editable conversion could not be imported.', detail: error.message }); }
       }
       const fileId = id(), name = path.basename(source), storedName = fileId + path.extname(name).toLowerCase();
       await fs.copyFile(source, path.join(dir, 'files', storedName));
       files.push({ id: fileId, name, storedName, size: stat.size, createdAt: new Date().toISOString(), position: { x: 80 + files.length % 3 * 350, y: fileRow + Math.floor(files.length / 3) * 280 } });
-      if (/\.(csv|md|txt)$/i.test(name) && stat.size <= 1024 * 1024) notes.push({ id: id(), title: name.replace(/\.[^.]+$/, ''), kind: /\.csv$/i.test(name) ? 'sheet' : 'note', content: await fs.readFile(source, 'utf8'), author: 'You', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), position: { x: 80 + (existingNotes + notes.length) % 3 * 350, y: 90 + Math.floor((existingNotes + notes.length) / 3) * 280 } });
-      if (/\.(xlsx|xlsm|xlsb|xls|ods|fods|numbers)$/i.test(name) && stat.size <= 50 * 1024 * 1024) { try { notes.push(require('./sheet-files.cjs').importFile(source, { x: 80 + (existingNotes + notes.length) % 3 * 350, y: 90 + Math.floor((existingNotes + notes.length) / 3) * 280 })); } catch {} }
+      if (/\.(md|txt)$/i.test(name) && stat.size <= 1024 * 1024) notes.push({ id: id(), title: name.replace(/\.[^.]+$/, ''), kind: 'note', content: await fs.readFile(source, 'utf8'), author: 'You', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), position: { x: 80 + (existingNotes + notes.length) % 3 * 350, y: 90 + Math.floor((existingNotes + notes.length) / 3) * 280 } });
+      if (/\.(xlsx|xlsm|xlsb|xls|ods|fods|numbers|csv|tsv)$/i.test(name)) { try { notes.push(await require('./imports.cjs').importDocument('sheet', source, { x: 80 + (existingNotes + notes.length) % 3 * 350, y: 90 + Math.floor((existingNotes + notes.length) / 3) * 280 })); } catch (error) { await dialog.showMessageBox(window, { type: 'warning', message: 'The original spreadsheet will be kept, but its editable conversion could not be imported.', detail: error.message }); } }
     }
     await store.update(s => { const p = s.projects.find(p => p.id === projectId); p.files.push(...files); p.notes.push(...notes); return s; });
   });
@@ -507,12 +494,11 @@ app.whenReady().then(async () => {
     return `data:${type};base64,${(await fs.readFile(full)).toString('base64')}`;
   });
   // The raw bytes of an uploaded file, for the in-app viewers.
-  handle('files:read', async (projectId, fileId) => {
+  handle('files:read', async (projectId, fileId, offset = 0, version) => {
     const file = store.state.projects.find(p => p.id === projectId)?.files.find(f => f.id === fileId);
     if (!file) throw new Error('Unknown file.');
     const full = path.join(store.projectDir(projectId), 'files', file.storedName);
-    if ((await fs.stat(full)).size > 150 * 1024 * 1024) throw new Error('This file is too large to preview.');
-    return fs.readFile(full);
+    return require('./file-chunks.cjs').readFileChunk(full, offset, version);
   });
   handle('artifact:preview', previewHtml);
   handle('artifact:ready',()=>{appAskReady=true;if(pendingAppAsk){send('artifact:ask',pendingAppAsk);pendingAppAsk=null;}});
@@ -531,7 +517,8 @@ app.whenReady().then(async () => {
     const selected = await dialog.showOpenDialog(window, { title: 'Import spreadsheets', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Spreadsheets', extensions: ['xlsx', 'xlsm', 'xlsb', 'xls', 'ods', 'fods', 'csv', 'tsv', 'numbers'] }, { name: 'All files', extensions: ['*'] }] });
     if (selected.canceled) return 0;
     const existing = store.state.projects.find(p => p.id === projectId)?.notes.length || 0, notes = [];
-    for (const file of selected.filePaths) notes.push(require('./sheet-files.cjs').importFile(file, { x: 80 + (existing + notes.length) % 3 * 350, y: 90 + Math.floor((existing + notes.length) / 3) * 280 }));
+    for (const file of selected.filePaths) notes.push(await require('./imports.cjs').importDocument('sheet', file, { x: 80 + (existing + notes.length) % 3 * 350, y: 90 + Math.floor((existing + notes.length) / 3) * 280 }));
+    await storage.assertWritable();
     await store.update(s => { s.projects.find(p => p.id === projectId).notes.push(...notes); return s; });
     return notes.length;
   });
@@ -559,6 +546,13 @@ app.whenReady().then(async () => {
   openLaunchApp(launchArgs);
   if (store.state.settings.launchAtLogin) { try { applyStartup(store.state.settings); } catch (e) { console.error(e.message); } }
   scheduler.start();
+  const cleanInline = async () => {
+    if (testData || storage.restartNeeded) return;
+    try { await storage.assertWritable(); await require('./inline-cleanup.cjs').cleanInlineFiles(store); }
+    catch (error) { console.error('Inline picture cleanup:', error.message); }
+  };
+  setTimeout(cleanInline, 30000).unref();
+  setInterval(cleanInline, 60 * 60 * 1000).unref();
   // Event reminders arrive as system notifications, even while the window is closed to the tray.
   if (!testData) {
     if (process.platform === 'win32' && !app.isPackaged) app.setAppUserModelId(process.execPath);

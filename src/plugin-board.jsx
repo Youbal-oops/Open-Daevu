@@ -1,6 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import { Database as DataIcon, Puzzle } from 'lucide-react';
 import { chartRows } from '../shared/chart-data.mjs';
+import { chartRenderError } from '../shared/chart-limits.mjs';
 import { PluginPage } from './plugins';
 import { SourcePicker } from './chart-editor';
 import { useInstalledPlugins } from './chart-kinds';
@@ -20,6 +21,8 @@ export function PluginBoard({ artifact, project, change, compact = false }) {
     }
   }), []);
   if (!plugin || !board) return <MissingPlugin info={{ name: plugin?.name || data.pluginId || 'its plugin' }} compact={compact}/>;
+  const limitError = ['chart-statistics', 'chart-business', 'chart-science'].includes(plugin.id) ? chartRenderError(table.rows) : '';
+  if (limitError) return <p className="inline-error">{limitError}</p>;
   if (compact) return <div className="plugin-board-tile"><Puzzle size={24}/><span>{board.name}</span></div>;
   const stage = <PluginPage plugin={plugin} pageId={'board:' + board.id} title={artifact.title} project={project} local={local} signal={table} className="plugin-board-frame"/>;
   if (!change) return <div className="plugin-board-stage">{stage}</div>;

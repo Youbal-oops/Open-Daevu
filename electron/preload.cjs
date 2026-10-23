@@ -1,5 +1,16 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const call = channel => (...args) => ipcRenderer.invoke(channel, ...args);
+async function readFile(projectId, fileId) {
+  let result, version, offset = 0;
+  do {
+    const chunk = await ipcRenderer.invoke('files:read', projectId, fileId, offset, version);
+    version = chunk.version;
+    if (!result) result = new Uint8Array(chunk.total);
+    if (chunk.total !== result.length || (!chunk.bytes.length && offset < result.length)) throw Error('The file changed while it was being read. Reopen the preview.');
+    result.set(chunk.bytes, offset); offset += chunk.bytes.length;
+  } while (offset < result.length);
+  return result;
+}
 contextBridge.exposeInMainWorld('workspace', {
   pluginBrowserAsk:call('plugins:browser-ask'),pluginsList:call('plugins:list'),pluginsPrepare:call('plugins:prepare'),pluginsInstall:call('plugins:install'),pluginsEnable:call('plugins:enable'),pluginsRemove:call('plugins:remove'),pluginsSettings:call('plugins:settings'),pluginsBuild:call('plugins:build'),pluginRequest:call('plugins:request'),pluginWebShow:call('plugins:web-show'),pluginWebHide:call('plugins:web-hide'),pluginWebAction:call('plugins:web-action'),pluginWebDraft:call('plugins:web-draft'),
   pendingLink: call('links:pending'),
@@ -17,7 +28,7 @@ contextBridge.exposeInMainWorld('workspace', {
   accountsDecide:call('accounts:decide'),accountsList: call('accounts:list'), accountsStart: call('accounts:start'), accountsCancel: call('accounts:cancel'), accountsModels: call('accounts:models'), accountsKey: call('accounts:key'), accountsAcknowledge: call('accounts:acknowledge'), accountsRename: call('accounts:rename'), accountsDisconnect: call('accounts:disconnect'), accountsRemove: call('accounts:remove'), accountsGoogle: call('accounts:google'),
   onAccounts: callback => { const listener=(_,state)=>callback(state);ipcRenderer.on('accounts:state',listener);return ()=>ipcRenderer.removeListener('accounts:state',listener); },
   attachImages:call('chat:images'),
-  patches: true, load: call('workspace:load'), mutate: call('workspace:mutate'), sync: call('workspace:sync'), mutatePatch: call('workspace:mutate2'), quitApp: call('app:quit'), importSheets: call('sheets:import'), readFile: call('files:read'), updateState: call('update:state'), updateCheck: call('update:check'), updateDownload: call('update:download'), updateInstall: call('update:install'), updateSkip: call('update:skip'), updatePage: call('update:page'), onUpdate: callback => { const listener = (_, state) => callback(state); ipcRenderer.on('update:state', listener); return () => ipcRenderer.removeListener('update:state', listener); }, uninstall: call('app:uninstall'), calendarImport: call('calendar:import'), calendarExport: call('calendar:export'), fileImage: call('workspace:file-image'), setTitleBar: call('app:title-bar'), clipboardWrite: call('clipboard:write'), clipboardRead: call('clipboard:read'), start: call('run:start'), retry:call('run:retry'), stop: call('run:stop'),
+  patches: true, load: call('workspace:load'), mutate: call('workspace:mutate'), sync: call('workspace:sync'), mutatePatch: call('workspace:mutate2'), quitApp: call('app:quit'), importSheets: call('sheets:import'), readFile, updateState: call('update:state'), updateCheck: call('update:check'), updateDownload: call('update:download'), updateInstall: call('update:install'), updateSkip: call('update:skip'), updatePage: call('update:page'), onUpdate: callback => { const listener = (_, state) => callback(state); ipcRenderer.on('update:state', listener); return () => ipcRenderer.removeListener('update:state', listener); }, uninstall: call('app:uninstall'), calendarImport: call('calendar:import'), calendarExport: call('calendar:export'), fileImage: call('workspace:file-image'), setTitleBar: call('app:title-bar'), clipboardWrite: call('clipboard:write'), clipboardRead: call('clipboard:read'), start: call('run:start'), retry:call('run:retry'), stop: call('run:stop'),
   sheetPython: call('sheet:python'), sheetStop: call('sheet:stop'),
   runSchedule: call('schedule:run'), tickSchedules: call('schedule:tick'),
   browserNew: call('browser:new'), browserTool: call('browser:tool'), browserShow: call('browser:show'), browserHide: call('browser:hide'), browserNavigate: call('browser:navigate'), browserAction: call('browser:action'), browserActivate: call('browser:activate'), browserClose: call('browser:close'), browserCapture: call('browser:capture'),

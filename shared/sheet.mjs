@@ -72,6 +72,7 @@ export function calculateSheet(rows, context = {}) {
   const books = context.sheets || {}, selfName = String(context.self || '').toLowerCase();
   const cache = new Map(), visiting = new Set(); let budget = 100000;
   const files = context.files || {}, SEP = '\u0000', grids = new Map([[SEP, rows]]);
+  const imported = new Map([[SEP, context.formulaCache]]);
   // A grid is named by its file and sheet; the file is empty for the document being calculated.
   const gridOf = (name, file = '', home = SEP) => {
     const homeFile = home.split(SEP)[0];
@@ -85,6 +86,7 @@ export function calculateSheet(rows, context = {}) {
       const get = book.sheets[(name || book.first || '').toLowerCase()];
       if (!get) throw Error('#REF!');
       grids.set(key, get());
+      imported.set(key, get.formulaCache);
     }
     return key;
   };
@@ -98,6 +100,11 @@ export function calculateSheet(rows, context = {}) {
     if (visiting.has(key)) throw Error('#CYCLE!');
     visiting.add(key);
     try { const result = parse(raw.slice(1), depth, grid, [y, x]); if (typeof result === 'number' && !Number.isFinite(result)) throw Error('#NUM!'); if (result instanceof Range) throw Error('#VALUE!'); cache.set(key, result); return result; }
+    catch (error) {
+      const saved = imported.get(grid)?.[columnName(x) + (y + 1)];
+      if (error.message === '#NAME?' && saved?.formula === raw) { cache.set(key, saved.value); return saved.value; }
+      throw error;
+    }
     finally { visiting.delete(key); }
   }
   function parse(source, depth, home, at = [0, 0]) {
@@ -299,6 +306,6 @@ export function calculateSheet(rows, context = {}) {
 // All sheets of a workbook as a calculation context. `parse` turns a sheet's CSV text into rows.
 export function sheetContext(sheets, parse, self, files) {
   const map = {};
-  for (const s of sheets || []) { let rows; map[String(s.name).toLowerCase()] = () => rows ||= parse(s.content || ''); }
-  return { sheets: map, self, files };
+  for (const s of sheets || []) { let rows; const get = () => rows ||= parse(s.content || ''); get.formulaCache = s.formulaCache; map[String(s.name).toLowerCase()] = get; }
+  return { sheets: map, self, files, formulaCache: map[String(self).toLowerCase()]?.formulaCache };
 }

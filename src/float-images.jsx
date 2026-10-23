@@ -81,9 +81,10 @@ function runsOf(el) {
   for (let node = walker.nextNode(); node; node = walker.nextNode()) if (node.nodeValue) out.push({ text: node.nodeValue, font: fontOf(node.parentElement) });
   return out;
 }
-function measure(root) {
+function measure(root, previous) {
   // Counted from the top of the content, not the scrolled view.
   const frame = root.getBoundingClientRect(), base = { top: frame.top - root.scrollTop, left: frame.left - root.scrollLeft, width: frame.width }, blocks = [];
+  const cached = previous?.width === base.width ? new Map(previous.blocks.map(b => [b.id, b])) : new Map();
   root.classList.add('flow-measuring');
   try {
     for (const row of root.querySelectorAll('[data-flow]')) {
@@ -94,8 +95,10 @@ function measure(root) {
       const box = el.getBoundingClientRect(), style = getComputedStyle(el), px = v => parseFloat(v) || 0;
       const padLeft = px(style.paddingLeft) + px(style.borderLeftWidth), padRight = px(style.paddingRight) + px(style.borderRightWidth), padTop = px(style.paddingTop) + px(style.borderTopWidth);
       const lineHeight = px(style.lineHeight) || px(style.fontSize) * 1.4, width = box.width - padLeft - padRight;
-      let fit = null;
+      const stamp = el.tagName === 'TEXTAREA' ? el.value : el.innerHTML, old = cached.get(id), font = fontOf(el);
+      let fit = old?.stamp === stamp && old.font === font ? old.cachedFit : null;
       const block = {
+        stamp, font, get cachedFit() { return fit; },
         id, solid: false, top: rect.top - base.top, height: rect.height, wrapTop: wrap.getBoundingClientRect().top - base.top, rowsTop: box.top - base.top + padTop,
         left: box.left - base.left + padLeft, width, lineHeight, padLeft, padRight,
         get fit() { return fit ||= makeFit(runsOf(el), style.whiteSpace); },
@@ -136,21 +139,28 @@ export function useFloatBoard({ projectId, images = [], onImages, signature = ''
   const remeasure = useCallback(() => {
     const root = rootRef.current; if (!root) return;
     corrections.current = {};
-    natural.current = shownRef.current.length ? measure(root) : null;
+    natural.current = shownRef.current.length ? measure(root, natural.current) : null;
     if (!natural.current) { setPlan(old => Object.keys(old).length ? {} : old); return; }
     replan();
   }, [replan]);
 
   // Measure again when the text, the width or the fonts change.
-  useLayoutEffect(() => { remeasure(); }, [signature, images.length, remeasure]);
+  useLayoutEffect(() => { remeasure(); }, [images.length, remeasure]);
+  const measuredSignature = useRef(signature);
+  useEffect(() => {
+    if (measuredSignature.current === signature) return;
+    const timer = setTimeout(() => { measuredSignature.current = signature; remeasure(); }, 140);
+    return () => clearTimeout(timer);
+  }, [signature, remeasure]);
   useEffect(() => {
     const root = rootRef.current; if (!root) return;
     let frame = 0, width = root.getBoundingClientRect().width;
     setColumn(Math.round(width));
     const watch = new ResizeObserver(() => { const now = root.getBoundingClientRect().width; if (Math.abs(now - width) < 0.5) return; width = now; setColumn(Math.round(now)); cancelAnimationFrame(frame); frame = requestAnimationFrame(remeasure); });
     watch.observe(root);
-    document.fonts?.ready.then(() => remeasure());
-    return () => { watch.disconnect(); cancelAnimationFrame(frame); };
+    let disposed = false;
+    document.fonts?.ready.then(() => { if (!disposed) { natural.current = null; remeasure(); } });
+    return () => { disposed = true; watch.disconnect(); cancelAnimationFrame(frame); };
   }, [remeasure]);
   // Moving a picture re-plans from the saved measurements; dragging never touches layout.
   useLayoutEffect(() => { corrections.current = {}; replan(); setReach(Math.max(0, ...shown.map(i => i.y + i.h))); }, [shown, replan]);
@@ -176,7 +186,7 @@ export function useFloatBoard({ projectId, images = [], onImages, signature = ''
       if (changed) replan();
     }, 140);
     return () => clearTimeout(timer);
-  }, [plan, live, replan, signature]);
+  }, [plan, live, replan]);
 
   const commit = useCallback(next => latest.current.onImages(next), []);
   const patch = useCallback((id, values) => commit(latest.current.images.map(i => i.id === id ? { ...i, ...values } : i)), [commit]);

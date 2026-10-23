@@ -4,6 +4,8 @@ import { calculateSheet, address, sheetContext } from './sheet.mjs';
 import { cleanSheetFields, workbookOf, projectFiles } from './workbook.mjs';
 import {validateApp} from './app-project.mjs';
 import { cleanBlocks, cleanImages, blocksToMarkdown, markdownToBlocks } from './blocks.mjs';
+import { renameSheetReferences } from './sheet-rename.mjs';
+import { planNoteTransfer, applyNoteDependencies, preserveSourceCharts } from './note-dependencies.mjs';
 import { validateEvent, addDays as calendarAddDays, parseKey as calendarParseKey, dateKey as calendarDateKey } from './calendar.mjs';
 const randomUUID = () => globalThis.crypto.randomUUID();
 const id = () => randomUUID();
@@ -391,7 +393,7 @@ function saveNoteRecord(prev, raw) {
   const incoming = { ...raw }; delete incoming.history; delete incoming.comments;
   if (incoming.format != null && !['markdown', 'blocks'].includes(incoming.format)) throw new Error('Invalid document format.');
   const sheetFields = cleanSheetFields(incoming);
-  delete incoming.sheets; delete incoming.sheetName; delete incoming.filters;
+  delete incoming.sheets; delete incoming.sheetName; delete incoming.filters; delete incoming.formulaCache;
   if (incoming.kind === 'sheet') { delete incoming.blocks; delete incoming.format; delete incoming.images; Object.assign(incoming, sheetFields); }
   else if (incoming.format === 'blocks') { incoming.blocks = cleanBlocks(incoming.blocks); incoming.content = blocksToMarkdown(incoming.blocks); if (incoming.images !== undefined) { incoming.images = cleanImages(incoming.images); if (!incoming.images.length) delete incoming.images; } }
   else { delete incoming.blocks; delete incoming.format; delete incoming.images; }
@@ -683,7 +685,24 @@ function applyMutation(state, action) {
       if (action.value.pythonScript != null && (typeof action.value.pythonScript !== 'string' || action.value.pythonScript.length > 100000)) throw new Error('Keep Python scripts under 100 KB.');
       if (action.value.pythonCommand != null && (typeof action.value.pythonCommand !== 'string' || action.value.pythonCommand.length > 1000 || /[\r\n]/.test(action.value.pythonCommand))) throw new Error('Choose a Python executable without arguments.');
       const index = project.notes.findIndex(n => n.id === action.value.id);
-      const saved = saveNoteRecord(index >= 0 ? project.notes[index] : null, action.value);
+      const previous = index >= 0 ? project.notes[index] : null;
+      let saved = saveNoteRecord(previous, action.value);
+      if (previous?.kind === 'sheet' && saved.kind === 'sheet') {
+        const before = workbookOf(previous), after = workbookOf(saved);
+        for (const sheet of before) {
+          const renamed = after.find(s => s.id === sheet.id);
+          if (!renamed || renamed.name === sheet.name) continue;
+          saved = renameSheetReferences(saved, sheet.name, renamed.name, csvParse, csvStringify);
+          for (const artifact of project.artifacts || []) {
+            const source = artifact.data?.source;
+            if (source?.type === 'sheet' && source.sheetId === saved.id && source.sheet?.toLowerCase() === sheet.name.toLowerCase()) source.sheet = renamed.name;
+          }
+          for (let n = 0; n < project.notes.length; n++) {
+            if (n === index || project.notes[n].kind !== 'sheet') continue;
+            project.notes[n] = renameSheetReferences(project.notes[n], sheet.name, renamed.name, csvParse, csvStringify, [previous.id, previous.title, saved.title]);
+          }
+        }
+      }
       if (index >= 0) project.notes[index] = saved; else project.notes.push(saved);
       break;
     }
@@ -713,10 +732,14 @@ function applyMutation(state, action) {
       if (!project || !target || target.id === project.id || !['note', 'file'].includes(kind)) throw new Error('Choose another project or folder to move this into.');
       const key = kind === 'note' ? 'notes' : 'files', item = project[key].find(x => x.id === itemId);
       if (!item) throw new Error('Unknown item.');
+      if ([...target.notes, ...target.files].some(x => x.id === itemId)) throw new Error('An item with this ID already exists in the destination.');
+      const plan = kind === 'note' ? planNoteTransfer(project, target, item, item.id) : null;
       project[key] = project[key].filter(x => x.id !== itemId);
+      if (kind === 'note') preserveSourceCharts(project, item, id());
       project.edges = (project.edges || []).filter(e => e.source !== itemId && e.target !== itemId);
       const placed = target.notes.length + target.files.length;
-      target[key].push({ ...item, position: { x: 80 + placed % 3 * 350, y: 90 + Math.floor(placed / 3) * 260 } });
+      if (plan) applyNoteDependencies(target, plan);
+      target[key].push({ ...(plan?.note || item), position: { x: 80 + placed % 3 * 350, y: 90 + Math.floor(placed / 3) * 260 } });
       break;
     }
     case 'item:copy': {
@@ -727,7 +750,9 @@ function applyMutation(state, action) {
       if (!item) throw new Error('That item no longer exists.');
       if ([...project.notes, ...project.files].some(x => x.id === newId)) throw new Error('That copy already exists.');
       const placed = project.notes.length + project.files.length, stamp = new Date().toISOString(), position = { x: 80 + placed % 3 * 350, y: 90 + Math.floor(placed / 3) * 260 };
-      const copy = structuredClone(item); delete copy.history; delete copy.comments;
+      const plan = kind === 'note' && source !== project ? planNoteTransfer(source, project, item, newId) : null;
+      if (plan) applyNoteDependencies(project, plan);
+      const copy = plan?.note || structuredClone(item); delete copy.history; delete copy.comments;
       if (kind === 'note') project.notes.push({ ...copy, id: newId, title: source === project ? `${item.title} copy` : item.title, createdAt: stamp, updatedAt: stamp, position });
       else project.files.push({ ...copy, id: newId, storedName: newId + (String(item.storedName).match(/\.[^.]*$/)?.[0] || '').toLowerCase(), createdAt: stamp, position });
       break;

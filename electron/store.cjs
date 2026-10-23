@@ -89,7 +89,7 @@ class Store {
       const heads=context.heads&&this.options.shared?this.options.shared.rebaseHeads(context.heads):context.heads;
       const base=heads?this.options.loaded(this.options.shared.stateAt(heads)):this.state;
       // applyMutation makes its own copy; any other caller edits what it is given, so it gets a copy of the state.
-      this.state = context.owned ? fn(base) : fn(structuredClone(base));
+      this.state = await (context.owned ? fn(base) : fn(structuredClone(base)));
       try { await this.commit(base,heads,context.action); } catch (e) { this.state = previous; throw e; }
       this.onChange(this.state);
       return context.owned ? this.state : structuredClone(this.state);
@@ -97,7 +97,7 @@ class Store {
     this.queue = operation.catch(() => {});
     return operation;
   }
-  mutate(action) { const heads=this.options.shared && (action.value?._rwSyncHeads || action._rwSyncHeads);return this.update(state => {if(action.type==='artifact' && action.value?.kind==='database' && action.value._rwDatabaseBase){const { _rwDatabaseBase:base,...value}=action.value;const current=state.projects.find(p=>p.id===action.projectId)?.artifacts?.find(a=>a.id===value.id);return applyMutation(state,{...action,value:{...value,data:mergeDatabaseDraft(base,value.data,current?.data || value.data)}});}return applyMutation(state, action);},{...(heads?{heads}:{}),action,owned:true}); }
+  mutate(action) { if (['item:move', 'item:copy'].includes(action.type)) return require('./item-transfer.cjs').transferItem(this, action); const heads=this.options.shared && (action.value?._rwSyncHeads || action._rwSyncHeads);return this.update(state => {if(action.type==='artifact' && action.value?.kind==='database' && action.value._rwDatabaseBase){const { _rwDatabaseBase:base,...value}=action.value;const current=state.projects.find(p=>p.id===action.projectId)?.artifacts?.find(a=>a.id===value.id);return applyMutation(state,{...action,value:{...value,data:mergeDatabaseDraft(base,value.data,current?.data || value.data)}});}return applyMutation(state, action);},{...(heads?{heads}:{}),action,owned:true}); }
   refreshShared(){
     if(!this.options.shared)return this.queue;
     const operation=this.queue.then(async()=>{const before=this.options.shared.heads(),next=await this.options.shared.pull();if(this.options.shared.heads()!==before){this.state=this.options.loaded(next);this.onChange(structuredClone(this.state));}return this.state;});this.queue=operation.catch(()=>{});return operation;
