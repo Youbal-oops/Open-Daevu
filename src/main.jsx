@@ -208,9 +208,15 @@ function App() {
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
   }, []);
-  const escapeRef = useRef(null);
+  const escapeRef = useRef(null), escapeBusy = useRef(false);
   escapeRef.current = () => { if (addOpen) { setAddOpen(false); return true; } if (pluginFraction > 0) { setPluginFraction(0); return true; } if (browserFraction > 0 || shownTab === 'browser') { closeBrowser(); return true; } if (shownTab === 'database' || shownTab === 'calendar') { closeTool(shownTab); return true; } if (boardFraction > 0) { setBoardFraction(0); return true; } if (appsFraction > 0) { setAppsFraction(0); return true; } if (view === 'plugin') { setView(project ? 'project' : 'home'); return true; } if (currentPluginTabKey) { setTab(homeTab(project)); return true; } return false; };
-  useEffect(() => { const key = e => { if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return; if (document.querySelector('.modal, .context-menu')) return; if (escapeRef.current()) e.preventDefault(); }; window.addEventListener('keydown', key); const off = api.onPluginWebShortcut?.(v => { if (v.escape) escapeRef.current(); }); return () => { window.removeEventListener('keydown', key); off?.(); }; }, []);
+  useEffect(() => { const key = e => { if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return; if (document.querySelector('.modal, .context-menu')) return;
+    if (escapeRef.current()) { e.preventDefault(); return; }
+    // Nothing else wanted the key: it shows or hides the project list, unless a menu, dialog, picture or the canvas is using it.
+    if (escapeBusy.current) return;
+    e.preventDefault(); setSidebarHidden(hidden => !hidden); }; // Looked at first, before any menu or dialog has had the chance to close itself, so a key that closes one never also moves the sidebar.
+    const look = e => { if (e.key === 'Escape') escapeBusy.current = Boolean(e.target?.closest?.('.float-img, .react-flow') || document.querySelector('[role=dialog], [role=menu], [role=listbox], .modal, .context-menu, .popover, .slash-menu, .profile-menu, .dash-menu, .emoji-pop, .connect-menu, .popover-anchor [aria-expanded="true"], .sheet-filter-button[aria-expanded="true"]')); };
+    window.addEventListener('keydown', look, true); window.addEventListener('keydown', key); const off = api.onPluginWebShortcut?.(v => { if (v.escape) escapeRef.current(); }); return () => { window.removeEventListener('keydown', look, true); window.removeEventListener('keydown', key); off?.(); }; }, []);
   function openProject(id) { setAppsFraction(0);act({ type: 'select', value: id }); setView('project'); const target=state.projects.find(p=>p.id===id);setTab(homeTab(target));setBoardFraction(0);setBrowserFraction(0);setPluginFraction(0);setActiveItem(null); }
   function openItem(type, id, projectId = project?.id) {
     setAppsFraction(0);setBoardFraction(0);setBrowserFraction(0);setPluginFraction(0);

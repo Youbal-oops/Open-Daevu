@@ -2,7 +2,8 @@
 // tidy up (move or rename documents, make folders) and link related work together. Everything it reads is data, never instructions.
 const crypto = require('node:crypto');
 const { applyAgentWork } = require('../shared/agent-pages.mjs');
-const { blocksToMarkdown } = require('../shared/blocks.mjs');
+const { blocksToMarkdown, markdownToBlocks } = require('../shared/blocks.mjs');
+const { parseActions, layoutDiagram } = require('../shared/domain.mjs');
 
 const lower = value => String(value || '').trim().toLowerCase();
 const clip = (text, n) => String(text || '').slice(0, n);
@@ -22,11 +23,73 @@ function workspaceMap(state, limit = 40) {
   return lines.join('\n') + (state.projects.length > limit ? `\n…and ${state.projects.length - limit} more. Use workspace_list with projectId "all" to see every project.` : '');
 }
 
+// The shapes agents already send in research-actions blocks are checked by the same code, so a function call and a block follow the same rules.
+function checked(key, items) {
+  const fence = '```';
+  return parseActions(`${fence}research-actions\n${JSON.stringify({ [key]: items })}\n${fence}`)[key];
+}
+
 function workspaceTools(store, projectId, agent) {
   const state = () => store.state;
   const current = () => state().projects.find(p => p.id === projectId);
   const object = properties => ({ type: 'object', properties, additionalProperties: false });
   return [
+    // Writing a document is a function call, so it works the same for every kind of agent and never depends on a fenced block being formatted just right.
+    { name: 'save_document', description: 'Create a document or spreadsheet in the current project, or update one by its id or exact title. Use it when the user asks you to write, make or save notes, a document or a spreadsheet. A document takes Markdown; a spreadsheet takes CSV text with a header row.',
+      parameters: { ...object({ title: { type: 'string' }, kind: { type: 'string', enum: ['note', 'sheet'], description: 'note for a document (default), sheet for a spreadsheet.' }, content: { type: 'string' }, id: { type: 'string', description: 'Id of an existing document in this project to update.' } }), required: ['title', 'content'] },
+      call: async ({ title, kind = 'note', content, id }) => {
+        const project = current(); if (!project) throw Error('No project is open.');
+        const name = String(title || '').trim().slice(0, 160), text = String(content ?? ''); if (!name) throw Error('Give the document a title.');
+        if (text.length > 400000) throw Error('That is too long for one document. Split it into several.');
+        const existing = id ? project.notes.find(n => n.id === id) : project.notes.find(n => lower(n.title) === lower(name));
+        if (id && !existing) throw Error('That id is not a document in this project. Leave id out to create a new one.');
+        const type = existing?.kind || (kind === 'sheet' ? 'sheet' : 'note'), now = new Date().toISOString();
+        const note = existing ? { ...existing, title: name, content: text, updatedAt: now } : { id: crypto.randomUUID(), title: name, kind: type, content: text, author: agent?.name || 'Agent', agentId: agent?.id, createdAt: now, updatedAt: now, position: { x: 80 + project.notes.length % 3 * 350, y: 90 + Math.floor(project.notes.length / 3) * 260 } };
+        if (existing?.format === 'blocks' && type !== 'sheet') note.blocks = markdownToBlocks(text, () => crypto.randomUUID());
+        await store.mutate({ type: 'note', projectId, value: note });
+        return { saved: { id: note.id, title: name, kind: type === 'sheet' ? 'spreadsheet' : 'document', updated: Boolean(existing) } };
+      } },
+    { name: 'save_board', description: 'Create a kanban board or a chart in the current project, or update the one with the same kind and title. A kanban board takes columns with card texts; a bar, line, area or pie chart takes CSV text with a header row, labels in the first column and numbers in the others.',
+      parameters: { ...object({ title: { type: 'string' }, kind: { type: 'string', enum: ['kanban', 'bar', 'line', 'area', 'pie'] }, columns: { type: 'array', description: 'Kanban only.', items: object({ title: { type: 'string' }, cards: { type: 'array', items: { type: 'string' } } }) }, csv: { type: 'string', description: 'Charts only.' } }), required: ['title', 'kind'] },
+      call: async args => {
+        const project = current(); if (!project) throw Error('No project is open.');
+        if (!['kanban', 'bar', 'line', 'area', 'pie'].includes(args.kind)) throw Error('Boards are kanban, bar, line, area or pie.');
+        const board = args.kind === 'area' ? checked('boards', [{ ...args, kind: 'line' }])[0] : checked('boards', [args])[0];
+        const kind = args.kind, existing = (project.artifacts || []).find(a => a.kind === kind && lower(a.title) === lower(board.title)), now = new Date().toISOString();
+        const data = kind === 'kanban' ? { columns: board.columns.map(c => ({ id: crypto.randomUUID(), title: c.title, cards: c.cards.map(text => ({ id: crypto.randomUUID(), text })) })) } : { csv: board.csv, sheetId: '', ...(existing?.data?.options ? { options: existing.data.options } : {}) };
+        const record = { id: existing?.id || crypto.randomUUID(), kind, title: board.title, data, createdAt: existing?.createdAt || now, updatedAt: now };
+        await store.mutate({ type: 'artifact', projectId, value: record });
+        return { saved: { id: record.id, title: record.title, kind, updated: Boolean(existing) } };
+      } },
+    { name: 'add_calendar_tasks', description: 'Add tasks to the user\'s calendar, linked to the current project. Each needs a title and a date (YYYY-MM-DD); a time (HH:MM) and notes are optional. Tasks with the same title and date are not added twice.',
+      parameters: { ...object({ tasks: { type: 'array', items: { ...object({ title: { type: 'string' }, date: { type: 'string' }, time: { type: 'string' }, notes: { type: 'string' } }), required: ['title', 'date'] } } }), required: ['tasks'] },
+      call: async ({ tasks }) => {
+        const items = checked('todos', (Array.isArray(tasks) ? tasks : []).slice(0, 8)), existing = state().todos || [], added = [];
+        for (const item of items) {
+          if (existing.some(t => lower(t.title) === lower(item.title) && t.date === item.date)) continue;
+          const record = { id: crypto.randomUUID(), title: item.title, notes: item.notes, date: item.date, time: item.time, projectId, done: false, createdBy: agent?.name || 'Agent' };
+          await store.mutate({ type: 'todo', value: record }); added.push({ title: record.title, date: record.date });
+        }
+        return { added, skipped: items.length - added.length };
+      } },
+    { name: 'draw_diagram', description: 'Draw a diagram on the current project\'s canvas. Give nodes (id, label, optional shape: rect, roundrect, diamond, ellipse, hexagon, parallelogram, triangle, arrow, sticky) and edges between node ids. Up to 60 nodes.',
+      parameters: { ...object({ title: { type: 'string' }, nodes: { type: 'array', items: object({ id: { type: 'string' }, label: { type: 'string' }, shape: { type: 'string' } }) }, edges: { type: 'array', items: object({ from: { type: 'string' }, to: { type: 'string' }, label: { type: 'string' } }) } }), required: ['title', 'nodes'] },
+      call: async args => {
+        const project = current(); if (!project) throw Error('No project is open.');
+        const diagram = checked('diagrams', [args])[0]; if (!diagram?.nodes.length) throw Error('A diagram needs nodes with an id and a label.');
+        const bottom = Math.max(0, ...(project.canvas || []).map(c => (c.position?.y || 0) + (c.size?.h || 0)), ...project.notes.map(n => (n.position?.y || 0) + 180), ...project.files.map(f => (f.position?.y || 0) + 180)), laid = layoutDiagram(diagram, { x: 80, y: bottom + 80 });
+        if ((project.canvas || []).length + laid.items.length > 2000) throw Error('The canvas is full.');
+        await store.mutate({ type: 'canvas:items', projectId, value: { items: laid.items.map(i => ({ ...i, text: i.text.slice(0, 5000) })), edges: laid.edges } });
+        return { drawn: { title: diagram.title, shapes: diagram.nodes.length } };
+      } },
+    { name: 'edit_project_page', description: 'Add to or replace the content of a project\'s page (the block page that opens first). Markdown; link other documents with [[Title]]. Use mode "append" unless the user asked you to rewrite the page.',
+      parameters: { ...object({ markdown: { type: 'string' }, mode: { type: 'string', enum: ['append', 'replace'] }, project: { type: 'string', description: 'Name or id of another project. Defaults to the current one.' } }), required: ['markdown'] },
+      call: async args => {
+        const target = projectOf(state(), args.project || projectId); if (!target) throw Error('That project was not found.');
+        const pages = checked('pages', [{ mode: args.mode, markdown: args.markdown }]), messages = [];
+        await store.update(next => { const here = next.projects.find(p => p.id === target.id); applyAgentWork(next, here, { pages }, agent, () => crypto.randomUUID(), text => messages.push(text)); return next; });
+        return { page: target.name, mode: pages[0]?.mode || 'append', notes: messages };
+      } },
     { name: 'workspace_search', description: 'Find documents, spreadsheets, pages, files, boards and projects anywhere in this workspace by words in their title or text. Returns ids you can use with the other workspace tools.',
       parameters: { ...object({ query: { type: 'string' }, scope: { type: 'string', enum: ['workspace', 'project'], description: 'Default workspace. Use project to stay in the current project.' }, kind: { type: 'string', enum: ['all', 'documents', 'files', 'boards', 'projects'] } }), required: ['query'] },
       call: ({ query, scope = 'workspace', kind = 'all' }) => {
