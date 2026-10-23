@@ -1,6 +1,6 @@
 import { resolveRef, kpiValue, listReferences, csvParse } from '../shared/domain.mjs';
 import { calculateSheet, sheetContext } from '../shared/sheet.mjs';
-import { workbookOf } from '../shared/workbook.mjs';
+import { workbookOf, projectSheetContext } from '../shared/workbook.mjs';
 
 const IMAGE = /\.(png|jpe?g|webp|gif)$/i;
 const coerce = v => { const n = typeof v === 'number' ? v : Number(String(v).replace(/,/g, '')); return String(v).trim() !== '' && Number.isFinite(n) ? n : v; };
@@ -21,7 +21,7 @@ export function bridgeRead(project, op, args = []) {
     case 'table': {
       const found = findTable(project, args[0]); if (!found) throw new Error('No database or spreadsheet is named "' + args[0] + '".');
       if (found.type === 'database') { const { properties, rows } = found.item.data; return { id: found.item.id, name: found.item.title, kind: 'database', columns: properties.map(p => ({ id: p.id, name: p.name, type: p.type })), rows: rows.slice(0, 5000).map(r => ({ id: r.id, values: Object.fromEntries(properties.map(p => [p.name, r.cells[p.id] ?? ''])) })) }; }
-      const raw = csvParse(found.item.content), values = calculateSheet(raw, sheetContext(workbookOf(found.item), csvParse, workbookOf(found.item)[0].name)), header = (values[0] || []).map((h, i) => String(h) || 'Column ' + (i + 1));
+      const raw = csvParse(found.item.content), values = calculateSheet(raw, projectSheetContext(found.item, project.notes, csvParse)), header = (values[0] || []).map((h, i) => String(h) || 'Column ' + (i + 1));
       return { id: found.item.id, name: found.item.title, kind: 'sheet', columns: header.map(h => ({ name: h })), rows: values.slice(1, 5001).map(r => ({ values: Object.fromEntries(header.map((h, i) => [h, coerce(r[i] ?? '')])) })) };
     }
     case 'files': return project.files.filter(f => IMAGE.test(f.storedName || f.name)).map(f => ({ id: f.id, name: f.name, size: f.size }));

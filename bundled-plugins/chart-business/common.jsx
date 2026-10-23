@@ -29,3 +29,5 @@ export function Frame({ W, H, pad, xs, ys, o, xTitle, yTitle, children, rotate }
   </>;
 }
 export const layout = (compact, o) => { const W = 640, H = compact ? 280 : 420; return { W, H, pad: { l: o.yTitle ? 70 : 58, r: 20, t: 16, b: (compact ? 38 : 50) + (o.xTitle ? 12 : 0) } }; };
+
+export { minimum, maximum } from './stats.mjs';

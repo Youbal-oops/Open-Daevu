@@ -33,3 +33,28 @@ test('a plugin folder shared through Drive is re-read when another computer chan
  await other.reload();assert.equal(await other.request(manifest.id,'main','research-project','storage:get',['roll']),20);assert.equal(changed.length,1);
  await other.reload();assert.equal(changed.length,1,'nothing changed, so nothing is announced');
 });
+
+
+test('concurrent editor saves serialize bytes and metadata together (#47)',async t=>{
+ const {plugins,store}=await setup(t),saved=await plugins.saveFile('research-project','Report.txt',Buffer.from('original'),'test'),id=saved.file.id;
+ const realUpdate=store.update.bind(store);let entered,release;const reached=new Promise(r=>entered=r),gate=new Promise(r=>release=r);t.after(()=>release());let first=true;
+ t.mock.method(store,'update',async(...args)=>{if(first){first=false;entered();await gate;}return realUpdate(...args);});
+ const firstSave=plugins.updateFile('research-project',id,Buffer.from('one'));await reached;
+ const secondSave=plugins.updateFile('research-project',id,Buffer.from('second version'));
+ await new Promise(r=>setTimeout(r,30));
+ const location=path.join(store.projectDir('research-project'),'files',saved.file.storedName);
+ assert.equal(await fs.readFile(location,'utf8'),'one','the second save waits for the first metadata commit');
+ release();await Promise.all([firstSave,secondSave]);
+ const file=store.state.projects[0].files.find(f=>f.id===id),bytes=await fs.readFile(location);
+ assert.equal(bytes.toString(),'second version');assert.equal(file.size,bytes.length);assert.equal(file.contentHash,require('node:crypto').createHash('sha256').update(bytes).digest('hex'));assert.equal(plugins.fileUpdates.size,0);
+});
+
+test('panels sharing an entry reuse one build, including concurrent requests and replacement (#57)',async t=>{
+ const {plugins}=await setup(t),shared={...manifest,panels:[...manifest.panels,{id:'other',title:'Other',type:'html',entry:'index.html'}]};
+ await plugins.install((await plugins.prepare({manifest:shared,files})).planId);
+ const results=await Promise.all([plugins.build(manifest.id,'main'),plugins.build(manifest.id,'other')]);
+ assert.equal(results[0].html,results[1].html);assert.equal(plugins.cache.size,1);
+ const changed={...files,'main.js':'document.querySelector("main").textContent="Replacement";'};
+ await plugins.install((await plugins.prepare({manifest:{...shared,version:'1.0.1'},files:changed})).planId);assert.equal(plugins.cache.size,0);
+ assert.match((await plugins.build(manifest.id,'other')).html,/Replacement/);
+});

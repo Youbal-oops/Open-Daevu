@@ -9,6 +9,7 @@ import { csvParse } from '../shared/domain.mjs';
 import { chartRows, kanbanFromRows, sourceOf } from '../shared/chart-data.mjs';
 import { KINDS, GROUPS, CHART_IDS, newChartData, boardSample, useInstalledPlugins, useBoardKinds, missingPlugin } from './chart-kinds';
 import { PluginBoard, MissingPlugin } from './plugin-board';
+import { RenderBoundary } from './render-boundary';
 import { Chart } from './charts';
 import { ChartEditor, SourcePicker } from './chart-editor';
 import { IconButton, Modal, Empty, uid, now, date } from './ui';
@@ -58,7 +59,8 @@ export function KanbanBoard({ data, onChange, readOnly = false }) {
   </section>)}{!readOnly && cols.length < 20 && <button className="kanban-new-col" onClick={() => set([...cols, { id: uid(), title: 'New column', cards: [] }])}><Plus size={15}/>Add column</button>}</div>;
 }
 
-export function ArtifactPreview({ artifact, project, still = false }) {
+export function ArtifactPreview(props) { return <RenderBoundary reset={props.artifact}><ArtifactPreviewContent {...props}/></RenderBoundary>; }
+function ArtifactPreviewContent({ artifact, project, still = false }) {
   const gone = missingPlugin(artifact, useInstalledPlugins());
   if (gone) return <MissingPlugin info={gone} compact/>;
   if (artifact.kind === 'plugin-board') return <PluginBoard artifact={artifact} project={project} compact={still}/>;
@@ -69,7 +71,8 @@ export function ArtifactPreview({ artifact, project, still = false }) {
   return <Chart kind={artifact.kind} table={chartRows(artifact.data, project)} data={artifact.data} compact/>;
 }
 
-export function ArtifactEditor({ artifact, project, onSave, onClose, onDelete }) {
+export function ArtifactEditor(props) { return <RenderBoundary reset={props.artifact}><ArtifactEditorContent {...props}/></RenderBoundary>; }
+function ArtifactEditorContent({ artifact, project, onSave, onClose, onDelete }) {
   if(artifact.kind==='html')return <AppStudio artifact={artifact} project={project} onClose={onClose} onDelete={onDelete}/>;
   return <BoardEditor artifact={artifact} project={project} onSave={onSave} onClose={onClose} onDelete={onDelete}/>;
 }

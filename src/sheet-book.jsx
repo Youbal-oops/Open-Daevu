@@ -24,7 +24,7 @@ export function SheetBook({ draft, change, projectId, noteId, peers }) {
   return <div className="sheet-book">
     {ctx.element}
     <Sheet key={active.id} content={active.content} onChange={content => patch(active.id, { content })} filters={active.filters} onFilters={filters => patch(active.id, { filters })} context={context}
-      script={draft.pythonScript || ''} command={draft.pythonCommand || 'python'} onScriptChange={pythonScript => change({ pythonScript })} onCommandChange={pythonCommand => change({ pythonCommand })} projectId={projectId} noteId={noteId + (active.id === 'main' ? '' : ':' + active.id)}/>
+      script={draft.pythonScript || ''} command={draft.pythonCommand || 'python'} onScriptChange={pythonScript => change({ pythonScript })} onCommandChange={pythonCommand => change({ pythonCommand })} projectId={projectId} noteId={noteId} sheetId={active.id}/>
     <div className="sheet-tabs" role="tablist" aria-label="Sheets">
       {list.map(sheet => <div key={sheet.id} className={`sheet-tab${sheet.id === active.id ? ' on' : ''}`} role="tab" aria-selected={sheet.id === active.id} onContextMenu={e => menu(e, sheet)} onDoubleClick={() => setRenaming(sheet.id)}>
         {renaming === sheet.id ? <input ref={input} autoFocus aria-label="Sheet name" defaultValue={sheet.name} maxLength={60} onBlur={e => rename(sheet, e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setRenaming(null); }}/> : <button type="button" onClick={() => setActive(sheet.id)}>{sheet.name}{sheet.filters?.on !== false && sheet.filters?.rules?.length ? <i className="tab-filter" title="Filtered"/> : null}</button>}

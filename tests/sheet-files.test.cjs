@@ -57,3 +57,26 @@ test('sheet names that collide in Excel are made unique and formulas follow the 
   assert.equal(wb.Sheets[names[1]].A1.f, `'${names[0]}'!A2*2`, 'the formula points at the exported name');
   assert.equal(wb.Sheets[names[3]].A1.f, `'${names[2]}'!A1+1`, 'a name that was just written is not renamed again');
 });
+
+test('text that looks like a number stays text when a table is exported, and keeps its zeros when one is imported', () => {
+  const note = noteFromSheets('Codes', [{ name: 'Codes', rows: [['Zip', 'Id', 'Qty', 'Price', 'Hex', 'Sci', 'Long'], ['02134', '00123', '42', '3.14', '0x1F', '1e3', '12345678901234567890']] }], { x: 0, y: 0 });
+  const file = temp('codes.xlsx'); writeNote(note, file, {});
+  const ws = XLSX.readFile(file).Sheets.Codes;
+  for (const ref of ['A2', 'B2', 'E2', 'F2', 'G2']) assert.equal(ws[ref].t, 's', ref + ' stays text');
+  assert.equal(ws.A2.v, '02134'); assert.equal(ws.G2.v, '12345678901234567890');
+  assert.equal(ws.C2.t, 'n'); assert.equal(ws.C2.v, 42); assert.equal(ws.D2.v, 3.14);
+});
+
+test('a CSV imports as text in the right encoding: zeros kept, accents intact, tabs honoured', () => {
+  const utf8 = temp('people.csv'); fs.writeFileSync(utf8, 'Name,Zip,City\nAna,00123,Zürich\nBen,02134,café\n');
+  assert.deepEqual(readWorkbook(utf8)[0].rows, [['Name', 'Zip', 'City'], ['Ana', '00123', 'Zürich'], ['Ben', '02134', 'café']]);
+  const bom = temp('bom.csv'); fs.writeFileSync(bom, '﻿a,b\n1,2\n');
+  assert.deepEqual(readWorkbook(bom)[0].rows, [['a', 'b'], ['1', '2']]);
+  const old = temp('old.csv'); fs.writeFileSync(old, Buffer.from('Name,City\nAna,Z\xFCrich\n', 'latin1'));
+  assert.equal(readWorkbook(old)[0].rows[1][1], 'Zürich', 'a Windows-1252 file is read too');
+  const tsv = temp('t.tsv'); fs.writeFileSync(tsv, 'a\tb\n007\t2\n');
+  assert.deepEqual(readWorkbook(tsv)[0].rows, [['a', 'b'], ['007', '2']]);
+  const wb = XLSX.utils.book_new(), sheet = XLSX.utils.aoa_to_sheet([[7]]); sheet.A1.z = '000'; sheet.A1.w = '007'; XLSX.utils.book_append_sheet(wb, sheet, 'S');
+  const xl = temp('z.xlsx'); XLSX.writeFile(wb, xl);
+  assert.equal(readWorkbook(xl)[0].rows[0][0], '007', 'a number formatted with leading zeros keeps them');
+});

@@ -20,8 +20,9 @@ export function UserAvatar({ settings, small = false }) {
   return <span className={`avatar user-photo ${small ? 'small' : ''}`}>{settings?.userAvatar ? <img src={settings.userAvatar} alt=""/> : <User size={small ? 12 : 15}/>}</span>;
 }
 export function IconButton({ icon: Icon, label, onClick, ...props }) { return <button type="button" className="icon-button" aria-label={label} title={label} onClick={onClick} {...props}><Icon size={17}/></button>; }
-export function Markdown({ children, onDoc }) {
-  const text = fixMarkdown(onDoc ? (children || '').replace(/\[\[([^\[\]\n]{1,120})\]\]/g, (_, title) => `[${title}](rwdoc:${encodeURIComponent(title.trim())})`) : children || '');
+export function Markdown({ children, onDoc, repair = false }) {
+  const source = repair ? fixMarkdown(children) : String(children || '');
+  const text = onDoc ? source.replace(/\[\[([^\[\]\n]{1,120})\]\]/g, (_, title) => `[${title}](rwdoc:${encodeURIComponent(title.trim())})`) : source;
   return <ReactMarkdown remarkPlugins={[remarkGfm]} urlTransform={url => url.startsWith('rwdoc:') ? url : defaultUrlTransform(url)} components={{ table: ({ children }) => <div className="md-table"><table>{children}</table></div>, a: ({ href, children }) => href?.startsWith('rwdoc:') ? <a className="doc-link" href="#" onClick={e => { e.preventDefault(); onDoc?.(decodeURIComponent(href.slice(6))); }}>{children}</a> : <a href={href} onClick={e => { e.preventDefault(); if (href) api.openURL(href); }}>{children}<ArrowUpRight size={12}/></a> }}>{text}</ReactMarkdown>;
 }
 export function Modal({ title, subtitle, children, onClose, wide }) {

@@ -28,7 +28,7 @@ test('headings and bullets are repaired, and code is left alone', async () => {
 
 test('Markdown tables become table blocks and back', async () => {
   const [, { markdownToBlocks, blocksToMarkdown, cleanBlocks }] = await modules;
-  const blocks = markdownToBlocks(SQUASHED, (() => { let n = 0; return () => 'b' + ++n; })());
+  const blocks = markdownToBlocks((await modules)[0].fixMarkdown(SQUASHED), (() => { let n = 0; return () => 'b' + ++n; })());
   assert.deepEqual(blocks.map(b => b.type), ['p', 'table', 'bullet']);
   assert.equal(blocks[1].text.split('\n').length, 4);
   assert.match(blocksToMarkdown(blocks), /\| 15 LPA \| ₹99,000 \| Yes \|/);

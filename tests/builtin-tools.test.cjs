@@ -1,5 +1,6 @@
 const { test } = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs/promises'), path = require('node:path'), os = require('node:os');
-const { builtinTools, privateAddress, safeUrl } = require('../electron/builtin-tools.cjs');
+const http = require('node:http');
+const { builtinTools, privateAddress, safeUrl, pinnedGet } = require('../electron/builtin-tools.cjs');
 
 async function project() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bt-')); await fs.mkdir(path.join(dir, 'files'));
@@ -28,8 +29,11 @@ test('files are found, read and searched inside the project only', async () => {
 });
 
 test('web fetch refuses this computer and its network, and checks every redirect', async () => {
-  for (const ip of ['127.0.0.1', '10.1.2.3', '192.168.0.9', '172.20.0.1', '169.254.1.1', '::1', 'fd00::1', '::ffff:127.0.0.1']) assert.ok(privateAddress(ip), ip);
-  for (const ip of ['8.8.8.8', '93.184.216.34']) assert.ok(!privateAddress(ip), ip);
+  for (const ip of ['127.0.0.1', '10.1.2.3', '192.168.0.9', '172.20.0.1', '169.254.1.1', '100.64.0.1', '0.0.0.0', '::1', '::', 'fd00::1', 'fe80::1', 'fe90::1', 'febf::1', '::ffff:127.0.0.1', '::ffff:7f00:1', '::ffff:a9fe:a9fe', '0:0:0:0:0:ffff:7f00:1', '64:ff9b::7f00:1', '2002:7f00:1::1']) assert.ok(privateAddress(ip), ip);
+  for (const ip of ['8.8.8.8', '93.184.216.34', '2606:4700:4700::1111', '::ffff:808:808']) assert.ok(!privateAddress(ip), ip);
+  await assert.rejects(safeUrl('http://[::ffff:127.0.0.1]/'), /not fetched/);
+  await assert.rejects(safeUrl('http://[::ffff:a9fe:a9fe]/'), /not fetched/);
+  await assert.rejects(safeUrl('http://100.64.0.1/'), /not fetched/);
   await assert.rejects(safeUrl('http://127.0.0.1:8080/'), /not fetched/);
   await assert.rejects(safeUrl('file:///etc/passwd'), /http and https/);
   await assert.rejects(safeUrl('https://user:pw@8.8.8.8/'), /plain/);
@@ -49,4 +53,13 @@ test('which tools an agent can be given, and why not', async () => {
   }
   assert.equal(toolBlock(read, { provider: 'claude' }), ''); assert.equal(toolBlock(search, { provider: 'codex' }), '');
   assert.match(toolBlock({ ...mcp, managed: true }, { provider: 'codex' }), /Claude only/);
+});
+
+test('the pinned connection refuses a name that points inside, and stops reading at the cap', async () => {
+  const server = http.createServer((req, res) => { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('x'.repeat(5000)); });
+  await new Promise(r => server.listen(0, '127.0.0.1', r)); const port = server.address().port;
+  try {
+    await assert.rejects(pinnedGet(`http://localhost:${port}/`), /not fetched/);
+    await assert.rejects(pinnedGet(`http://127.0.0.1:${port}/`), /not fetched/);
+  } finally { server.close(); }
 });

@@ -13,12 +13,8 @@ import './file-viewer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
-const ext = name => (/\.([^.]+)$/.exec(name || '')?.[1] || '').toLowerCase();
-const TEXT = new Set(['txt', 'md', 'markdown', 'json', 'log', 'xml', 'yml', 'yaml', 'toml', 'ini', 'js', 'mjs', 'ts', 'tsx', 'jsx', 'css', 'html', 'py', 'rb', 'go', 'rs', 'java', 'c', 'h', 'cpp', 'sh', 'sql', 'csv', 'tsv']);
-const VIDEO = new Set(['mp4', 'webm', 'mov', 'm4v', 'ogv']), AUDIO = new Set(['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac']);
-export const viewerKind = name => { const e = ext(name); return e === 'pdf' ? 'pdf' : e === 'epub' ? 'epub' : VIDEO.has(e) ? 'video' : AUDIO.has(e) ? 'audio' : TEXT.has(e) && !['csv', 'tsv'].includes(e) ? 'text' : null; };
-// Editors that enabled plugins offer for this kind of file.
-export const editorsFor = (plugins, name) => plugins.filter(p => p.enabled).flatMap(plugin => (plugin.contributes?.fileEditors || []).filter(e => e.extensions.includes(ext(name))).map(editor => ({ plugin, editor })));
+import { ext, viewerKind, editorsFor } from './file-kinds';
+export { viewerKind, editorsFor } from './file-kinds';
 const size = bytes => bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const MIME = { mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', m4v: 'video/mp4', ogv: 'video/ogg', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', m4a: 'audio/mp4', flac: 'audio/flac', aac: 'audio/aac' };
 
@@ -45,6 +41,7 @@ function PdfPage({ doc, number, scale, root }) {
   useEffect(() => {
     if (!near || !dims) return;
     let live = true, task, layer;
+    const surface = canvas.current, textLayer = text.current;
     doc.getPage(number).then(async page => {
       if (!live) return;
       const ratio = window.devicePixelRatio || 1, c = canvas.current, viewport = page.getViewport({ scale });
@@ -56,7 +53,7 @@ function PdfPage({ doc, number, scale, root }) {
       layer = new pdfjs.TextLayer({ textContentSource: page.streamTextContent(), container: text.current, viewport });
       layer.render().catch(() => {});
     });
-    return () => { live = false; task?.cancel(); layer?.cancel(); };
+    return () => { live = false; task?.cancel(); layer?.cancel(); if (surface) { surface.width = 0; surface.height = 0; } textLayer?.replaceChildren(); };
   }, [near, dims, doc, number, scale]);
   return <div ref={box} className="pdf-page" data-page={number} style={{ width: dims?.width, height: dims?.height || 800 }}>{dims && <><canvas ref={canvas} style={{ width: dims.width, height: dims.height }}/><div ref={text} className="textLayer"/></>}</div>;
 }
@@ -84,8 +81,17 @@ function PdfViewer({ bytes }) {
     measure(); const watch = new ResizeObserver(measure); watch.observe(root.current); return () => watch.disconnect();
   }, [doc]);
   useEffect(() => setJump(String(page)), [page]);
-  // The page being read is the first one that still reaches below the top of the view.
-  const onScroll = e => { const top = e.currentTarget.scrollTop + 60; for (const el of e.currentTarget.children) if (el.offsetTop + el.offsetHeight > top) { setPage(Number(el.dataset.page)); break; } };
+  // Track only pages whose visibility changes; scrolling never measures every page.
+  useEffect(() => {
+    const scroll = root.current; if (!doc || !scroll) return;
+    const visible = new Set();
+    const watch = new IntersectionObserver(entries => {
+      for (const entry of entries) { const n = Number(entry.target.dataset.page); if (entry.isIntersecting) visible.add(n); else visible.delete(n); }
+      if (visible.size) setPage(Math.min(...visible));
+    }, { root: scroll, rootMargin: '-60px 0px 0px 0px', threshold: 0 });
+    for (const el of scroll.children) watch.observe(el);
+    return () => watch.disconnect();
+  }, [doc]);
   const scale = zoom === 'fit' ? fit : zoom, go = n => { const at = Math.max(1, Math.min(doc.numPages, n)); root.current?.querySelector(`[data-page="${at}"]`)?.scrollIntoView({ block: 'start' }); setPage(at); };
   const step = factor => setZoom(Math.max(0.25, Math.min(4, +(scale * factor).toFixed(2))));
   if (error) return <Message icon={FileText}>{error}</Message>;
@@ -105,7 +111,7 @@ function PdfViewer({ bytes }) {
     </div>
     <div className="fv-body">
       {thumbs && <div className="pdf-thumbs">{Array.from({ length: doc.numPages }, (_, i) => <PdfThumb key={i} doc={doc} number={i + 1} current={page === i + 1} onGo={go}/>)}</div>}
-      <div className="pdf-scroll" ref={root} onScroll={onScroll}>{Array.from({ length: doc.numPages }, (_, i) => <PdfPage key={i} doc={doc} number={i + 1} scale={scale} root={root}/>)}</div>
+      <div className="pdf-scroll" ref={root}>{Array.from({ length: doc.numPages }, (_, i) => <PdfPage key={i} doc={doc} number={i + 1} scale={scale} root={root}/>)}</div>
     </div>
   </div>;
 }
@@ -129,23 +135,22 @@ async function openEpub(bytes) {
   return { zip, title, chapters: spine.map((item, i) => ({ ...item, label: names.get(item.href) || `Section ${i + 1}` })) };
 }
 function EpubViewer({ bytes }) {
-  const [book, setBook] = useState(null), [error, setError] = useState(''), [at, setAt] = useState(0), [html, setHtml] = useState(''), [contents, setContents] = useState(true), [fontSize, setFontSize] = useState(() => Number(localStorage.getItem('rw-epub-size')) || 17), body = useRef(null), urls = useRef([]);
+  const [book, setBook] = useState(null), [error, setError] = useState(''), [at, setAt] = useState(0), [html, setHtml] = useState(''), [contents, setContents] = useState(true), [fontSize, setFontSize] = useState(() => Number(localStorage.getItem('rw-epub-size')) || 17), body = useRef(null);
   useEffect(() => { let live = true; openEpub(bytes).then(b => live && setBook(b)).catch(() => live && setError('This book could not be opened.')); return () => { live = false; }; }, [bytes]);
   useEffect(() => {
-    if (!book?.chapters[at]) return; let live = true;
+    if (!book?.chapters[at]) return; let live = true; const urls = [];
     (async () => {
-      const chapter = book.chapters[at], doc = new DOMParser().parseFromString(await book.zip.file(chapter.href).async('string'), 'text/html');
-      urls.current.forEach(u => URL.revokeObjectURL(u)); urls.current = [];
+      const chapter = book.chapters[at], doc = new DOMParser().parseFromString(DOMPurify.sanitize(await book.zip.file(chapter.href).async('string'), { ALLOW_DATA_ATTR: false }), 'text/html');
+      if (!live) return;
       for (const img of [...doc.querySelectorAll('img[src], image')]) {
         const src = img.getAttribute('src') || img.getAttribute('href') || img.getAttribute('xlink:href'), file = src && !/^(https?:|data:)/.test(src) ? book.zip.file(resolvePath(chapter.href, src)) : null;
-        if (file) { const url = URL.createObjectURL(new Blob([await file.async('uint8array')], { type: /\.png$/i.test(src) ? 'image/png' : /\.svg$/i.test(src) ? 'image/svg+xml' : /\.gif$/i.test(src) ? 'image/gif' : 'image/jpeg' })); urls.current.push(url); img.setAttribute('src', url); } else img.removeAttribute('src');
+        if (file) { const bytes = await file.async('uint8array'); if (!live) return; const url = URL.createObjectURL(new Blob([bytes], { type: /\.png$/i.test(src) ? 'image/png' : /\.svg$/i.test(src) ? 'image/svg+xml' : /\.gif$/i.test(src) ? 'image/gif' : 'image/jpeg' })); urls.push(url); img.setAttribute('src', url); } else img.removeAttribute('src');
       }
       doc.querySelectorAll('link,style,script').forEach(n => n.remove());
-      if (live) { setHtml(DOMPurify.sanitize(doc.body.innerHTML, { ADD_ATTR: ['src'], ALLOW_DATA_ATTR: false })); body.current?.scrollTo(0, 0); }
+      if (live) { setHtml(doc.body.innerHTML); body.current?.scrollTo(0, 0); }
     })().catch(() => live && setHtml('<p>This section could not be shown.</p>'));
-    return () => { live = false; };
+    return () => { live = false; urls.forEach(u => URL.revokeObjectURL(u)); };
   }, [book, at]);
-  useEffect(() => () => urls.current.forEach(u => URL.revokeObjectURL(u)), []);
   if (error) return <Message icon={BookOpen}>{error}</Message>;
   if (!book) return <Message icon={BookOpen}>Opening…</Message>;
   const resize = d => setFontSize(v => { const n = Math.max(12, Math.min(28, v + d)); try { localStorage.setItem('rw-epub-size', n); } catch {} return n; });

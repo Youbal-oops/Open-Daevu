@@ -3,8 +3,9 @@
 const crypto = require('node:crypto');
 const { applyAgentWork } = require('../shared/agent-pages.mjs');
 const { blocksToMarkdown, markdownToBlocks } = require('../shared/blocks.mjs');
-const { parseActions, layoutDiagram } = require('../shared/domain.mjs');
+const { validateActions, applyMutation, layoutDiagram } = require('../shared/domain.mjs');
 
+const {fixMarkdown} = require('../shared/markdown-fix.mjs');
 const lower = value => String(value || '').trim().toLowerCase();
 const clip = (text, n) => String(text || '').slice(0, n);
 const readable = note => note.format === 'blocks' && Array.isArray(note.blocks) ? blocksToMarkdown(note.blocks) : note.content || '';
@@ -25,8 +26,7 @@ function workspaceMap(state, limit = 40) {
 
 // The shapes agents already send in research-actions blocks are checked by the same code, so a function call and a block follow the same rules.
 function checked(key, items) {
-  const fence = '```';
-  return parseActions(`${fence}research-actions\n${JSON.stringify({ [key]: items })}\n${fence}`)[key];
+  return validateActions({ [key]: items })[key];
 }
 
 function workspaceTools(store, projectId, agent) {
@@ -39,11 +39,15 @@ function workspaceTools(store, projectId, agent) {
       parameters: { ...object({ title: { type: 'string' }, kind: { type: 'string', enum: ['note', 'sheet'], description: 'note for a document (default), sheet for a spreadsheet.' }, content: { type: 'string' }, id: { type: 'string', description: 'Id of an existing document in this project to update.' } }), required: ['title', 'content'] },
       call: async ({ title, kind = 'note', content, id }) => {
         const project = current(); if (!project) throw Error('No project is open.');
-        const name = String(title || '').trim().slice(0, 160), text = String(content ?? ''); if (!name) throw Error('Give the document a title.');
+        const name = String(title || '').trim().slice(0, 160), text = kind === 'sheet' ? String(content ?? '') : fixMarkdown(content); if (!name) throw Error('Give the document a title.');
         if (text.length > 400000) throw Error('That is too long for one document. Split it into several.');
-        const existing = id ? project.notes.find(n => n.id === id) : project.notes.find(n => lower(n.title) === lower(name));
+        // Only a document of the same kind is a match by title, and one the user wrote is only changed when its id is given.
+        const wanted = kind === 'sheet' ? 'sheet' : 'note', same = n => (n.kind === 'sheet' ? 'sheet' : 'note') === wanted;
+        const existing = id ? project.notes.find(n => n.id === id) : project.notes.find(n => lower(n.title) === lower(name) && same(n));
         if (id && !existing) throw Error('That id is not a document in this project. Leave id out to create a new one.');
-        const type = existing?.kind || (kind === 'sheet' ? 'sheet' : 'note'), now = new Date().toISOString();
+        if (!id && existing && !existing.agentId) throw Error(`There is already a ${wanted === 'sheet' ? 'spreadsheet' : 'document'} called "${existing.title}" that you did not write. Find its id with workspace_search and pass it to update it, or choose another title.`);
+        if (existing && !same(existing)) throw Error('Choose a document of the same kind.');
+        const type = existing?.kind || wanted, now = new Date().toISOString();
         const note = existing ? { ...existing, title: name, content: text, updatedAt: now } : { id: crypto.randomUUID(), title: name, kind: type, content: text, author: agent?.name || 'Agent', agentId: agent?.id, createdAt: now, updatedAt: now, position: { x: 80 + project.notes.length % 3 * 350, y: 90 + Math.floor(project.notes.length / 3) * 260 } };
         if (existing?.format === 'blocks' && type !== 'sheet') note.blocks = markdownToBlocks(text, () => crypto.randomUUID());
         await store.mutate({ type: 'note', projectId, value: note });
@@ -56,7 +60,19 @@ function workspaceTools(store, projectId, agent) {
         if (!['kanban', 'bar', 'line', 'area', 'pie'].includes(args.kind)) throw Error('Boards are kanban, bar, line, area or pie.');
         const board = args.kind === 'area' ? checked('boards', [{ ...args, kind: 'line' }])[0] : checked('boards', [args])[0];
         const kind = args.kind, existing = (project.artifacts || []).find(a => a.kind === kind && lower(a.title) === lower(board.title)), now = new Date().toISOString();
-        const data = kind === 'kanban' ? { columns: board.columns.map(c => ({ id: crypto.randomUUID(), title: c.title, cards: c.cards.map(text => ({ id: crypto.randomUUID(), text })) })) } : { csv: board.csv, sheetId: '', ...(existing?.data?.options ? { options: existing.data.options } : {}) };
+        // A board that draws from a spreadsheet or document keeps that link; its numbers are changed at the source, not here.
+        if (existing?.data?.source && existing.data.source.type !== 'own') throw Error(`"${existing.title}" draws its ${kind === 'kanban' ? 'cards' : 'numbers'} from a spreadsheet or document. Change that source instead, or save this one under a different title.`);
+        const base = existing?.data || {};
+        let data;
+        if (kind === 'kanban') {
+          const columns = structuredClone(base.columns || []), known = new Set(columns.flatMap(c => c.cards.map(card => lower(card.text))));
+          for (const incoming of board.columns) {
+            let column = columns.find(c => lower(c.title) === lower(incoming.title));
+            if (!column) { column = { id: crypto.randomUUID(), title: incoming.title, cards: [] }; columns.push(column); }
+            for (const text of incoming.cards) if (!known.has(lower(text))) { known.add(lower(text)); column.cards.push({ id: crypto.randomUUID(), text }); }
+          }
+          data = { ...base, columns };
+        } else data = { ...base, csv: board.csv, sheetId: '' };
         const record = { id: existing?.id || crypto.randomUUID(), kind, title: board.title, data, createdAt: existing?.createdAt || now, updatedAt: now };
         await store.mutate({ type: 'artifact', projectId, value: record });
         return { saved: { id: record.id, title: record.title, kind, updated: Boolean(existing) } };
@@ -64,12 +80,15 @@ function workspaceTools(store, projectId, agent) {
     { name: 'add_calendar_tasks', description: 'Add tasks to the user\'s calendar, linked to the current project. Each needs a title and a date (YYYY-MM-DD); a time (HH:MM) and notes are optional. Tasks with the same title and date are not added twice.',
       parameters: { ...object({ tasks: { type: 'array', items: { ...object({ title: { type: 'string' }, date: { type: 'string' }, time: { type: 'string' }, notes: { type: 'string' } }), required: ['title', 'date'] } } }), required: ['tasks'] },
       call: async ({ tasks }) => {
-        const items = checked('todos', (Array.isArray(tasks) ? tasks : []).slice(0, 8)), existing = state().todos || [], added = [];
-        for (const item of items) {
-          if (existing.some(t => lower(t.title) === lower(item.title) && t.date === item.date)) continue;
-          const record = { id: crypto.randomUUID(), title: item.title, notes: item.notes, date: item.date, time: item.time, projectId, done: false, createdBy: agent?.name || 'Agent' };
-          await store.mutate({ type: 'todo', value: record }); added.push({ title: record.title, date: record.date });
-        }
+        const items = checked('todos', (Array.isArray(tasks) ? tasks : []).slice(0, 8)), added = [];
+        await store.update(next => {
+          for (const item of items) {
+            if ((next.todos || []).some(t => lower(t.title) === lower(item.title) && t.date === item.date)) continue;
+            next = applyMutation(next, { type: 'todo', value: { id: crypto.randomUUID(), ...item, projectId, done: false, createdBy: agent?.name || 'Agent' } });
+            added.push({ title: item.title, date: item.date });
+          }
+          return next;
+        });
         return { added, skipped: items.length - added.length };
       } },
     { name: 'draw_diagram', description: 'Draw a diagram on the current project\'s canvas. Give nodes (id, label, optional shape: rect, roundrect, diamond, ellipse, hexagon, parallelogram, triangle, arrow, sticky) and edges between node ids. Up to 60 nodes.',

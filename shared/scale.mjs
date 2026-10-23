@@ -8,3 +8,6 @@ export function niceScale(min, max, count = 5) {
   return { min: lo, max: hi, ticks };
 }
 export function logTicks(min, max) { const lo = Math.floor(Math.log10(Math.max(min, 1e-12))), hi = Math.ceil(Math.log10(Math.max(max, min * 10))), ticks = []; for (let e = lo; e <= hi; e++) ticks.push(10 ** e); return { min: 10 ** lo, max: 10 ** hi, ticks }; }
+
+export function minimum(values, baseline = Infinity) { for (const value of values) baseline = Math.min(baseline, value); return baseline; }
+export function maximum(values, baseline = -Infinity) { for (const value of values) baseline = Math.max(baseline, value); return baseline; }

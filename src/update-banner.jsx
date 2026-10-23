@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Download, X, ExternalLink, RefreshCw } from 'lucide-react';
+import { Download, X, ExternalLink } from 'lucide-react';
 import { api } from './api';
 
 export function useUpdates() {
@@ -25,11 +25,4 @@ export function UpdateBanner({ update, onError }) {
       <button className="icon-button" aria-label="Skip this version" title="Skip this version" onClick={() => { api.updateSkip(); setHidden(true); }}><X size={15}/></button>
     </div>
   </aside>;
-}
-
-// A row for the settings dialog.
-export function UpdateRow({ update, onError }) {
-  const [busy, setBusy] = useState(false), [note, setNote] = useState('');
-  async function check() { setBusy(true); setNote(''); try { const s = await api.updateCheck(); setNote(s?.available ? `Version ${s.available.version} is available.` : s?.error || 'You are on the latest version.'); } catch (e) { onError?.(e.message); } finally { setBusy(false); } }
-  return <div className="update-row"><span>Daevu {update?.current || ''}{note ? ' · ' + note : ''}</span><button type="button" className="button secondary small-button" disabled={busy} onClick={check}><RefreshCw size={13}/>{busy ? 'Checking…' : 'Check for updates'}</button></div>;
 }

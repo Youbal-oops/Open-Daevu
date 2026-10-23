@@ -1,3 +1,4 @@
+import { minimum, maximum } from './common.jsx';
 import React, { useMemo, useState } from 'react';
 import { xyData, columnsData, matrixData, categoryData } from './data.mjs';
 import { niceScale, fitCurve, boxStats, histogram, describe, correlation, FITS } from './stats.mjs';
@@ -10,8 +11,8 @@ function ScatterChart({ table, o, compact }) {
   const { W, H, pad } = layout(compact, o), series = data.series.filter(s => !hidden.has(s.name));
   const xv = data.xs.filter(Number.isFinite), yv = series.flatMap(s => s.y).filter(Number.isFinite);
   if (!xv.length || !yv.length) return <Empty>No numbers to plot.</Empty>;
-  const xs = scale(Math.min(...xv), Math.max(...xv), pad.l, W - pad.r, { log: o.logX }), ys = scale(Math.min(...yv), Math.max(...yv), H - pad.b, pad.t, { log: o.logY });
-  const sizes = data.series[0]?.size?.filter(Number.isFinite) || [], sMax = Math.max(...sizes, 1);
+  const xs = scale(minimum(xv), maximum(xv), pad.l, W - pad.r, { log: o.logX }), ys = scale(minimum(yv), maximum(yv), H - pad.b, pad.t, { log: o.logY });
+  const sizes = data.series[0]?.size?.filter(Number.isFinite) || [], sMax = maximum(sizes, 1);
   const fits = o.fit && o.fit !== 'none' ? series.map(s => { const pairs = data.xs.map((x, i) => [x, s.y[i]]).filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y)); return { s, fit: fitCurve(o.fit, pairs.map(p => p[0]), pairs.map(p => p[1])), r: correlation(pairs.map(p => p[0]), pairs.map(p => p[1])) }; }) : [];
   return <div className="chart-wrap"><Title o={o}/><svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="scatter chart">
     <Frame W={W} H={H} pad={pad} xs={xs} ys={ys} o={{ ...o, xgrid: true }} xTitle={o.xTitle || data.xName} yTitle={o.yTitle}/>
@@ -26,7 +27,7 @@ function HistogramChart({ table, o, compact }) {
   const columns = useMemo(() => columnsData(table.rows), [table.rows]);
   if (!columns.length) return <Empty>Put the numbers to count in a column with a header.</Empty>;
   const column = columns.find(c => c.name === o.column) || columns[0], bins = histogram(column.values, o.bins ? Number(o.bins) : undefined), stats = describe(column.values), { W, H, pad } = layout(compact, o);
-  const xs = scale(bins[0].from, bins.at(-1).to, pad.l, W - pad.r, { count: 6 }), ys = scale(0, Math.max(...bins.map(b => b.count)), H - pad.b, pad.t, { zero: true }), width = bins[0].to - bins[0].from;
+  const xs = scale(bins[0].from, bins.at(-1).to, pad.l, W - pad.r, { count: 6 }), ys = scale(0, maximum(bins.map(b => b.count)), H - pad.b, pad.t, { zero: true }), width = bins[0].to - bins[0].from;
   const normal = o.curve && stats.sd > 0 ? Array.from({ length: 100 }, (_, k) => { const x = bins[0].from + (bins.at(-1).to - bins[0].from) * k / 99, pdf = Math.exp(-((x - stats.mean) ** 2) / (2 * stats.sd ** 2)) / (stats.sd * Math.sqrt(2 * Math.PI)); return [xs.at(x), ys.at(pdf * stats.count * width)]; }) : null;
   return <div className="chart-wrap"><Title o={o}/><svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="histogram">
     <Frame W={W} H={H} pad={pad} xs={xs} ys={ys} o={o} xTitle={o.xTitle || column.name} yTitle={o.yTitle || 'Count'}/>
@@ -39,7 +40,7 @@ function BoxChart({ table, o, compact }) {
   const columns = useMemo(() => columnsData(table.rows), [table.rows]);
   if (!columns.length) return <Empty>Each column with a header becomes one box.</Empty>;
   const boxes = columns.map(c => ({ c, b: boxStats(c.values) })), { W, H, pad } = layout(compact, o), all = boxes.flatMap(({ b }) => [b.min, b.max, ...b.outliers]);
-  const ys = scale(Math.min(...all), Math.max(...all), H - pad.b, pad.t, { log: o.logY }), band = (W - pad.l - pad.r) / boxes.length, w = Math.min(70, band * .5);
+  const ys = scale(minimum(all), maximum(all), H - pad.b, pad.t, { log: o.logY }), band = (W - pad.l - pad.r) / boxes.length, w = Math.min(70, band * .5);
   return <div className="chart-wrap"><Title o={o}/><svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="box plot">
     <Frame W={W} H={H} pad={pad} ys={ys} o={o} xTitle={o.xTitle} yTitle={o.yTitle}/>
     {boxes.map(({ c, b }, i) => { const x = pad.l + band * (i + .5), col = color(i); return <g key={c.name}>
@@ -58,7 +59,7 @@ function HeatmapChart({ table, o, compact }) {
   const { cols, rowsLabels, matrix } = useMemo(() => matrixData(table.rows), [table.rows]);
   const flat = matrix.flat().filter(Number.isFinite);
   if (!cols.length || !rowsLabels.length || !flat.length) return <Empty>Put row names down the first column, column names across the top, and numbers in the grid.</Empty>;
-  const lo = Math.min(...flat), hi = Math.max(...flat), W = 640, left = 110, top = 40, cw = Math.min(90, (W - left - 16) / cols.length), ch = Math.min(40, (compact ? 220 : 340) / rowsLabels.length), H = top + ch * rowsLabels.length + 34;
+  const lo = minimum(flat), hi = maximum(flat), W = 640, left = 110, top = 40, cw = Math.min(90, (W - left - 16) / cols.length), ch = Math.min(40, (compact ? 220 : 340) / rowsLabels.length), H = top + ch * rowsLabels.length + 34;
   const shade = v => { if (!Number.isFinite(v)) return 'transparent'; const t = hi === lo ? .5 : (v - lo) / (hi - lo); return `color-mix(in srgb, ${PALETTE[0]} ${Math.round(12 + t * 78)}%, ${o.diverge && t < .5 ? PALETTE[4] : 'transparent'})`; };
   return <div className="chart-wrap"><Title o={o}/><svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="heat map">
     {cols.map((c, j) => <text key={j} x={left + cw * (j + .5)} y={top - 10} textAnchor="middle" className="chart-axis">{shorten(c, 11)}</text>)}
@@ -68,7 +69,7 @@ function HeatmapChart({ table, o, compact }) {
 function RadarChart({ table, o }) {
   const { labels, series } = useMemo(() => categoryData(table.rows), [table.rows]);
   if (labels.length < 3 || !series.length) return <Empty>Radar charts need at least three labels and one column of numbers.</Empty>;
-  const max = niceScale(0, Math.max(...series.flatMap(s => s.values), 1)).max, cx = 300, cy = 190, r = 140, n = labels.length, pt = (i, v) => { const a = -Math.PI / 2 + (i / n) * Math.PI * 2; return [cx + r * (v / max) * Math.cos(a), cy + r * (v / max) * Math.sin(a)]; };
+  const max = niceScale(0, maximum(series.flatMap(s => s.values), 1)).max, cx = 300, cy = 190, r = 140, n = labels.length, pt = (i, v) => { const a = -Math.PI / 2 + (i / n) * Math.PI * 2; return [cx + r * (v / max) * Math.cos(a), cy + r * (v / max) * Math.sin(a)]; };
   return <div className="chart-wrap"><Title o={o}/><svg viewBox="0 0 600 390" role="img" aria-label="radar chart">
     {[.25, .5, .75, 1].map(f => <polygon key={f} points={labels.map((_, i) => pt(i, max * f).join(',')).join(' ')} fill="none" className="chart-grid"/>)}
     {labels.map((l, i) => { const [x, y] = pt(i, max), [lx, ly] = pt(i, max * 1.12); return <g key={i}><line x1={cx} y1={cy} x2={x} y2={y} className="chart-grid"/><text x={lx} y={ly + 3.5} textAnchor={lx < cx - 8 ? 'end' : lx > cx + 8 ? 'start' : 'middle'} className="chart-axis">{shorten(l, 14)}</text></g>; })}

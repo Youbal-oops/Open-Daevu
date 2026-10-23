@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const shape = v => v.blocks.map(b => b.id + b.type + (b.indent || 0) + (b.checked ? 1 : 0)).join('|') + JSON.stringify(v.images || []);
+const shapes = new WeakMap(), imageShapes = new WeakMap();
+const imageShape = images => { if (!images) return '[]'; if (!imageShapes.has(images)) imageShapes.set(images, JSON.stringify(images)); return imageShapes.get(images); };
+const shape = v => { if (shapes.has(v)) return shapes.get(v); const result = v.blocks.map(b => b.id + b.type + (b.indent || 0) + (b.checked ? 1 : 0)).join('|') + imageShape(v.images); shapes.set(v, result); return result; };
 
 // Undo and redo for a page or document: value is { blocks, images }, apply puts an earlier one back.
 // Typing in the same block is grouped, so one step undoes a burst rather than a single letter.

@@ -8,7 +8,7 @@ import { useInstalledPlugins } from './chart-kinds';
 // A board a plugin draws. The plugin is handed the table and the state it saved last, and hands back new state.
 export function PluginBoard({ artifact, project, change, compact = false }) {
   const plugins = useInstalledPlugins(), data = artifact.data, plugin = plugins.find(p => p.id === data.pluginId && p.enabled), board = plugin?.contributes?.boards?.find(b => b.id === data.boardId);
-  const table = useMemo(() => chartRows(data, project), [data, project.notes]);
+  const table = useMemo(() => chartRows(data, project), [data.source, data.csv, data.transpose, data.sheetId, project.notes]);
   const latest = useRef({}); latest.current = { artifact, table, change };
   const local = useMemo(() => ({
     'board:get': () => ({ title: latest.current.artifact.title, boardId: latest.current.artifact.data.boardId, editable: Boolean(latest.current.change), state: latest.current.artifact.data.state ?? null, table: latest.current.table }),
