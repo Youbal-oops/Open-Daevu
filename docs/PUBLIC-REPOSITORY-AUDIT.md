@@ -77,7 +77,7 @@ All commands below ran in this branch/worktree on Windows with Node.js 24.12.0 a
 
 The first documentation-check run identified unfinished audit links and a README heading mismatch; these were corrected. The initial historical-body check caught newline normalization, so the body was restored directly from the original Git blob. A raw-byte comparison of untouched legal files also encountered Windows checkout line endings; normalized text and the Git diff establish that they were not edited. No failing result is being substituted with an older run.
 
-Documentation checks cover local targets, path case for GitHub/Linux compatibility, heading fragments and package-version consistency. They do not validate all external HTTP links or every Markdown dialect. Native UI/provider tests and installer packaging were not re-run for this documentation-only change. The new GitHub docs workflow has not yet run remotely.
+Documentation checks cover local targets, path case for GitHub/Linux compatibility, heading fragments and package-version consistency. They do not validate all external HTTP links or every Markdown dialect. Native UI/provider tests and installer packaging were not re-run for this documentation-only change. The docs workflow’s [first PR run](https://github.com/Youbal-oops/Open-Daevu/actions/runs/39978291601) passed on commit `fe37d77`. This is remote evidence for that revision, not a packaged-application check.
 
 ## Outstanding concerns and unverified claims
 
