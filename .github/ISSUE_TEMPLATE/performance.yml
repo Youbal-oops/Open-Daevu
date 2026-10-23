@@ -1,0 +1,30 @@
+# Youbal said to fix: request measurements and data scale for performance reports.
+name: Performance problem
+description: Report slow startup, editing, imports or excessive resource use.
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Daevu version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and data size
+      description: Windows/build type, approximate CPU/RAM, project size, row/page/item counts and relevant plugins. Do not attach private workspace data.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction and measurements
+      description: Describe the operation, expected timing and actual timing. Say how you measured it and whether it repeats after restarting.
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Minimal example or diagnostic details
+      description: Include only synthetic data and redacted logs.

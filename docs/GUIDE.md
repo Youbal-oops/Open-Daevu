@@ -1,49 +1,20 @@
+<!-- Youbal said to fix: update navigation, format limits, storage behavior and current-versus-historical claims. -->
 # Guide
 
-The full reference for Daevu: setup, agents, storage, plugins and every feature added over time. The short version is in the [README](../README.md).
+This guide describes the public source version in [package.json](../package.json). Version labels retained in section headings identify when a capability was introduced, not the current release. Earlier test reports and private-development notes are preserved in [VALIDATION.md](../VALIDATION.md).
 
-A Windows desktop workspace for AI-assisted research and maintenance. Built around local projects, named specialist agents, shared findings, and a freeform canvas. The compact desktop interface uses smoky charcoal glass, locally bundled Inter typography, a tabbed work area, rounded controls, and a full-height agent inspector on the right, with a matching frosted light theme.
+For installation, project status and a feature overview, start with the [README](../README.md). The core workspace is complete; new functionality should normally use [plugins](../PLUGINS.md) or project apps. Current core work focuses on bugs, performance, reliability and compatibility.
 
-## What's included
+## Finding things
 
-- **Apps**: a tab for interactive pages that you or your agents build from scratch (dashboards, maps with tokens, games, trackers). Describe one and an agent builds it, or write your own. They run in a locked-down sandbox with no network, read project values, tables and image files through a small `rw` SDK, and save their own data between opens.
-- **References**: press Ctrl+Shift+C on a spreadsheet cell, database cell or column, text block, or KPI to copy a reference such as `{{r_ab12cd}}`. Name it in References to get `{{revenue}}`. Use references in KPI formulas, Live value blocks, live apps, and chat messages.
-- **KPI formulas**: a KPI can be a formula such as `=SUM({{costs}}) / {{leads}}` that updates with the project.
-- **Messenger-style chat** with contacts, profile pictures, an effort slider (Auto to Max), `/` links to documents, files, and folders (including ones on your computer), tool selection per message, and agent-made interactive pages, kanban boards, and charts shown inline.
-- **Team contacts** with search, online or working status, and one-click add or remove per project.
-- **Connections gallery**: search the public MCP Registry, choose a remote service, and connect through supported browser OAuth or an API token. Custom HTTP, SSE, and local-command servers are also supported. Select connections per agent or per message. Credentials stay encrypted on the device.
-- **Calendar & tasks**: month calendar of your own tasks and agent schedules, with *Ask AI to plan* so an agent adds tasks for you.
-- **block-based Page** for every project and work folder (blocks, `/` commands, embedded documents, spreadsheets, boards, imports). Work folders open on the Page; each project or folder can start on Page, Canvas, or Overview.
-- **Canvas**: sticky notes, shapes, text, frames, freehand pen, connectors, embedded editable documents and spreadsheets, boards and charts, and Tidy up.
-- **Boards & charts**: kanban plus bar, line, and pie charts, each openable in its own tab.
-- **Open items as tabs**, and one **Files** tab with an Upload button.
-- In-app Google Drive folder storage: move a workspace into Drive, open an existing one on another PC, or keep a local copy. Uses the installed Google Drive for desktop app.
-- Start with a blank workspace: no preset projects, notes, or profiles.
-- Create projects with nested work folders. Each folder has its own overview, team, chat, documents, files, browser, canvas, and schedules.
-- Track work status and optional KPIs. Parent overviews show child folders, their metrics, and totals across the project.
-- Assign a team of agent profiles to each project or folder.
-- Connect ChatGPT through browser sign-in, Google/Gemini through your desktop OAuth configuration, or Claude through its installed CLI browser sign-in. API-key connections are also available.
-- Name each agent, choose a saved account or optional CLI, and retain a default model and editable role prompt.
-- Build a role prompt locally from a short description, or write your own.
-- Chat with a selected agent using its saved account connection or installed CLI. Credentials stay in a protected store outside project data.
-- Agents can call other assigned specialists through a native delegation tool or structured actions. Specialist reports appear in the originating chat, addressed to the lead agent. The lead remains the recipient of user replies and synthesizes the findings. Ordinary chat does not create notes.
-- Task history, error reporting, cancellation, time limits, and a handoff budget.
-- Shared Markdown notes with edit/preview, automatic saving, and export.
-- Editable CSV spreadsheet grids with compact headers, keyboard navigation, range selection, table copy/paste, undo/redo, fill-down, resizable columns, frozen row 1, source editing, import, and export. Cells support arithmetic, references, ranges, and basic formulas.
-- VS Code-style activity rail with Apps at the top, connected work panes, left-edge Canvas, Browser and plugin pull-outs, and sidebar collapse while a pull-out is open.
-- A saved Python script panel per spreadsheet, with manual Run, output and cell-change preview, Apply/Discard, cancellation, and a 30-second limit. Python 3 must be installed.
-- A canvas with draggable document/file cards, connections, pan, zoom, and persistent placement.
-- Import local documents, images, PDFs, Word files, and Excel files. Originals are copied into the workspace. Markdown, text, and CSV imports up to 1 MB additionally become editable documents.
-- Search projects, notes, and profiles; a cross-project document library; light and dark modes.
-- A native tabbed browser with address/search input, back/forward/reload, saved sources, a collapsible source rail, and page text shared to the chat draft.
-- A full-height agent panel with working Chat, Context, Sources, and Tasks views. Chat stays on the right across browser, overview, documents, and canvas.
-- One-time, daily, weekly, and interval-based scheduled agent tasks, including agent-created follow-ups, pause/resume, editing, deletion, and Run now.
-- Optional launch at Windows sign-in, quiet startup in the system tray, and continued scheduling after the main window closes.
-- GitHub Actions builds a Windows x64 installer and a portable `.exe`.
+- Use the profile menu under your name for **Settings**, **Plugins**, **Tools & MCP** and **Connections**. Settings can also open with Ctrl+,.
+- Projects and work folders have pages, Files, boards and optional tool tabs. A work folder has its own data and can belong to a top-level project; folders cannot be nested arbitrarily.
+- The top tool controls open canvas, browser, apps and plugin pull-outs. The project list and agent chat can be moved or resized. The sidebar can be hidden from the toolbar or with Ctrl+\; Escape closes an active tool or toggles the sidebar when nothing else handles it.
+- Documents use the block editor; Markdown is an import/export representation. Files also holds spreadsheets and uploads. Supported PDFs, EPUBs, text and media have built-in previews; images have annotations/crop. Preview support and import conversion have limits.
+- Boards includes Kanban, basic charts, dashboards and databases. Statistics, business and science chart types are optional plugins.
+- Agents, MCP, website chats, Drive and Python are optional integrations. See [account connections](../ACCOUNT-CONNECTIONS.md) and [security boundaries](../SECURITY.md).
 
-New installations start empty. Existing local work is preserved when upgrading. There are no simulated AI replies or fabricated connection statuses. Test fixtures are confined to tests/ and excluded from packaged executables.
-
-Account connections are implemented in v0.3.0. Open **Connections**, sign in, and choose the saved connection in an agent profile. Google OAuth requires a Desktop client JSON; Claude account sign-in requires an installed Claude Code. Voice is not included. See [ACCOUNT-CONNECTIONS.md](ACCOUNT-CONNECTIONS.md) for setup, billing distinctions, tools, and verification limits.
+New installations start empty. Example projects and provider replies in automated checks are fixtures, not preinstalled content or evidence of live service compatibility.
 
 ## Run from source
 
@@ -63,33 +34,21 @@ npm start
 
 `npm run dev:web` opens an optional browser preview at `http://127.0.0.1:5173`. The browser preview saves to that browser's local storage; native files and agent execution require the desktop app.
 
-## Let GitHub build the EXE
+## Build Windows packages
 
-1. Create a GitHub repository and put **the contents of this folder** at the repository root, including `.github`, `package.json`, and `package-lock.json`.
-2. Push to `main` or `master`, or open **Actions → Build Windows app → Run workflow**.
-3. When the job completes, download **Daevu-Windows** from its artifacts.
-4. Extract the artifact. Run the `Setup.exe` installer or the `Portable.exe` directly.
+The Windows workflow runs only through **Actions → Build Windows app → Run workflow** (or an explicit workflow dispatch). It does not run automatically on branch/tag pushes. It uploads a `Daevu-Windows` artifact; its release-attachment step runs only for a tag ref.
 
-The workflow tests and builds the app without AI credentials or a Google OAuth client. No user login data is bundled. The build is unsigned; a public release should add a Windows code-signing certificate. Publishing a GitHub Release is not automatic.
-
-Local packaging uses:
-
-```powershell
-npm test
-npm run dist:win
-```
-
-Output is in `release/`. The repository includes a lockfile for reproducible dependency installation.
+For a local package, use `npm run dist:win`. Output goes to ignored `release/`. Follow [RELEASING.md](RELEASING.md) for checks, packaged-app verification and publishing. A build succeeding does not mean an installer has been launched or a provider sign-in tested.
 
 ## Connect your agents
 
-For account-based agents, start in **Connections**, then select a saved account and an available model when creating the profile. ChatGPT uses eligible plan usage; Gemini and direct API connections use the applicable API access and billing. CLI MCP tools and direct account capabilities differ; see [ACCOUNT-CONNECTIONS.md](ACCOUNT-CONNECTIONS.md).
+For account-based agents, start in **Connections**, then select a saved account and an available model when creating the profile. ChatGPT plan access depends on the granted permissions and account eligibility; Gemini and direct API connections require the applicable API access and billing. CLI MCP tools and direct account capabilities differ; see [account connections](../ACCOUNT-CONNECTIONS.md).
 
-For optional CLI profiles, install your chosen provider CLI separately and sign in using that provider's instructions. Then open **Agents → Check CLI**. This verifies the executable/version; it does not perform a paid model request or guarantee that every model or tool is available.
+For optional CLI profiles, install your chosen provider CLI separately and sign in using that provider's instructions. Then open the agent profile and use its CLI check control. This verifies the executable/version; it does not perform a paid model request or guarantee that every model or tool is available.
 
 ### Codex
 
-The profile command defaults to `codex`; you can supply an absolute executable path. A blank model uses your CLI's configured default. Enter a model identifier supported by your account to override it. Product labels such as “Astra” are not assumed to be universal CLI identifiers.
+The profile command defaults to `codex`; you can supply an absolute executable path. A blank model uses your CLI's configured default. Enter a model identifier supported by your account to override it. Use identifiers accepted by the installed CLI rather than assuming website labels are CLI model IDs.
 
 The adapter sends the research prompt through stdin to `codex --search exec --json --skip-git-repo-check --sandbox workspace-write -c sandbox_workspace_write.network_access=true`. It reads final agent-message events, uses the project folder as its working directory, and inherits the CLI's MCP setup. Network access remains subject to your provider, operating system, and CLI configuration.
 
@@ -99,7 +58,7 @@ Reference: [official Codex CLI commands](https://learn.chatgpt.com/docs/develope
 
 The profile command defaults to `claude`. `sonnet`, `opus`, and `haiku` are available as convenient inputs; actual model access depends on your account. You can type any supported model identifier.
 
-The adapter uses `claude -p --output-format json` and sends the prompt on stdin. Read, Glob, Grep, WebSearch, and WebFetch are allowed for research. Add the names of the MCP tools you want in **Edit agent → CLI & tool configuration → Additional allowed tools**. Existing CLI MCP connections are inherited. An optional additional MCP JSON file path can be set in workspace Settings.
+The adapter uses `claude -p --output-format json` and sends the prompt on stdin. Read, Glob, Grep, WebSearch, and WebFetch are allowed for research. Select tools in the agent profile or chat Tools menu. Advanced CLI/tool configuration can include additional allowed tool names. Existing CLI MCP connections are inherited. An optional additional MCP JSON file path can be set in workspace Settings.
 
 Reference: [Claude programmatic usage](https://code.claude.com/docs/en/headless) and [CLI flags](https://code.claude.com/docs/en/cli-reference).
 
@@ -109,7 +68,7 @@ Choose **Other · Custom CLI**, enter an executable path and arguments as a JSON
 
 ## Agent collaboration
 
-The app supplies project context and a roster of assigned specialists with every request. Agents can append:
+The app supplies project context and a roster of assigned specialists with every request. Agents can use the project function tools to save documents, boards, diagrams, tasks and page content. Structured action blocks remain supported; for example:
 
 ````text
 ```research-actions
@@ -127,13 +86,13 @@ The app supplies project context and a roster of assigned specialists with every
 
 The coordinator validates actions, saves notes, and routes handoffs to **assigned** agents only. Repeated recipients in one response are deduplicated, busy agents are not started twice, ancestor agents stay occupied while they wait, and a shared handoff budget limits recursive delegation. A parent receives the specialist reports in a synthesis call. Each call has its own visible task record.
 
-Ordinary responses remain in chat and do not create notes. Agents save important findings through explicit note actions; you can also save a reply as a note. Include an existing note ID to update it, or reuse its title to consolidate a topic within the same folder. An ID from another folder is rejected. Chat history remains stored locally. KPIs are manually maintained in each overview. Malformed actions produce a visible message and do not execute. Tool and provider failures remain visible in chat and task history. A Stop request cancels the whole related research run.
+Ordinary responses remain in chat and do not create notes. Agents save important findings through explicit note actions; you can also save a reply as a note. Include an existing note ID to update it, or reuse its title to consolidate a topic within the same folder. An ID from another folder is rejected. Chat history remains stored locally. KPIs can hold manually entered values or formulas over project references. Malformed actions produce a visible message and do not execute. Tool and provider failures remain visible in chat and task history. A Stop request cancels the whole related research run.
 
 ## Scheduled research and Windows startup
 
 Open **Scheduled tasks → New scheduled task**. Choose a project and assigned agent, describe the task, and select one-time, daily at a local time, weekly on selected weekdays, or a repeating interval. Repeating tasks can run every 10 minutes or more. Daily tasks use the computer's current local timezone. The list shows next runs, last results, and who created each task. You can run, pause, edit, and delete tasks.
 
-In **Settings → Startup & background**, enable **Launch when I sign in to Windows** to register the packaged app as a login item. The app opens quietly in the tray. This is user sign-in startup, not a system service before login. For portable builds, keep the EXE in the same location; installing the Setup build is preferable for regular startup use.
+In **Settings → General → Startup**, enable **Open when I sign in to Windows** to register the packaged app as a login item. The app opens quietly in the tray. This is user sign-in startup, not a system service before login. For portable builds, keep the EXE in the same location; installing the Setup build is preferable for regular startup use.
 
 **Keep running when the window closes** is enabled by default. Closing the window hides it in the system tray; double-click the icon to return, or select **Quit** from its menu to stop the app and its scheduler. Turning this setting off makes closing the window exit normally. Background scheduling requires the computer to be on and the app running. It does not wake a powered-off or sleeping computer. On startup or wake, an overdue task runs once, and its next occurrence is calculated without replaying every missed interval. Busy agents are allowed to finish before their pending scheduled work starts.
 
@@ -160,9 +119,9 @@ Startup registration uses [Electron's login item API](https://www.electronjs.org
 
 Open a project's **Browser** tab. Create tabs with **+**, enter a URL or search query, and use the navigation controls as in a browser. Each project retains up to 12 tabs and its saved sources. Website sessions and cookies are stored locally in a separate browser partition. **Ctrl L**, **Ctrl T**, and **Ctrl W** are available while a webpage has focus. Site-requested popups open as app tabs for HTTP/HTTPS URLs.
 
-Save the current page with the bookmark icon. Sources, project notes, and local attachments appear in the source pane. Notes open in the editor; attachments open in their associated desktop applications. Use **Ask agent about this page** to put the page title, URL, and up to 20,000 characters of visible text into the chat draft. Review it and send when ready. The coordinator also supplies saved source URLs in project context.
+Save the current page with the bookmark icon. Sources, project notes, and local attachments appear in the source pane. Notes open in the editor; attachments open in a supported in-app viewer or their associated desktop application. Use **Ask agent about this page** to put the page title, URL, and up to 20,000 characters of visible text into the chat draft. Review it and send when ready. The coordinator also supplies saved source URLs in project context.
 
-This is a user-controlled browser. Agents research through their own CLI tools and MCP connections; they do not automatically control these tabs or inherit their login cookies. Page capture does not handle every complex document viewer, image-only page, or inaccessible content. Website camera/microphone/geolocation permission requests are disabled. Only HTTP/HTTPS navigation is accepted, and website renderers have no Node integration or workspace preload bridge. Modals hide the native page surface while displayed.
+This is a user-controlled browser. Ordinary agents use their configured provider/CLI and selected tools; they do not automatically inherit browser cookies. The optional browser assistant can receive explicitly shared tab text and a screenshot, and browser plugins can add scripts and tools. Page capture does not handle every complex document viewer, image-only page, or inaccessible content. Website camera/microphone/geolocation permission requests are disabled. Only HTTP/HTTPS navigation is accepted, and website renderers have no Node integration or workspace preload bridge. Modals hide the native page surface while displayed.
 
 The browser uses Electron [WebContentsView](https://www.electronjs.org/docs/latest/api/web-contents-view), so normal websites are not limited by iframe embedding restrictions. Live pages require the desktop app; the web preview shows the browser layout and stored tabs.
 
@@ -185,7 +144,7 @@ Local storage does not mean offline AI: relevant project notes, recent conversat
 
 ## Scope of this version
 
-This is a working MVP, not a complete office-suite replacement. Notes use Markdown; spreadsheets use CSV with text cells. DOCX, PDF, and XLSX files are retained as attachments and open in their native applications. Automatic extraction of every attachment format, Excel formulas, APK/mobile builds, Google Docs-style character-by-character collaboration, guaranteed access to every platform’s private connector catalog, and automatic website publishing are not implemented.
+The core workspace is complete, with compatibility limits. Documents use block records and Markdown export; spreadsheets use CSV-backed cells with a bounded formula engine. PDFs and other supported files have in-app viewers. Word uploads are converted to editable Markdown; in this public version, successful Word conversion does not retain the original upload or its images. Keep the original separately. Spreadsheet imports can truncate large workbooks or lose formatting/cached formula results. Mobile builds, character-level shared document editing, access to every private connector catalog and automatic website deployment are not provided.
 
 Direct account adapters can call selected MCP servers through the app. CLI profiles use their CLI permissions; Codex/custom CLI profiles still use their existing CLI MCP configuration. No CLI sandbox or permission checks are bypassed. Research-only behavior is expressed in agent prompts; it is not a universal security boundary for arbitrary custom CLIs or powerful MCP servers. Imported content is labeled as untrusted context in the coordinator prompts.
 
@@ -202,11 +161,11 @@ Direct account adapters can call selected MCP servers through the app. CLI profi
 
 Electron bridge implementation follows [Electron context isolation guidance](https://www.electronjs.org/docs/latest/tutorial/context-isolation).
 
-Inter is bundled locally under its SIL Open Font License; see [build/INTER-LICENSE.txt](build/INTER-LICENSE.txt).
+Inter is bundled locally under its SIL Open Font License; see [font license](../build/INTER-LICENSE.txt).
 
 ## Spreadsheet formulas and Python
 
-Click a cell to select it, then type to replace its value. Double-click or press F2 to edit existing text; Escape cancels the edit. Enter moves down, Tab moves across, and arrow keys move between cells. Shift+arrows or dragging selects a range. Ctrl+C/V copies and pastes tabular data, including multiline cells. Ctrl+Z/Y undoes or redoes edits, and Fill down (Ctrl+D) copies the top selected row with relative formula references adjusted. The formula bar shows the selected cell source, and its name box jumps to addresses or ranges such as B12 or A1:C10. Formula cells show calculated results until editing. Addresses include the first row: A1 is the top-left cell. Edits autosave after a short pause, including while typing; Ctrl+S saves immediately. Drag column boundaries to resize them, or use Left/Right while a resize handle is focused. Column widths are remembered locally. Freeze row 1 keeps a header visible, and the footer shows selection count, sum, and average. The grid renders a moving window of rows rather than stopping at row 1,000, with up to 10,000 editable rows and 256 columns; imported data beyond those bounds is retained in CSV source and export. Calculations update when inputs change. Supported functions: SUM, AVERAGE, MIN, MAX, COUNT, COUNTA, ROUND, ABS, IF, IFERROR; arithmetic, percentages, comparisons, text concatenation, absolute references, and rectangular ranges are supported. Circular references and invalid formulas show cell errors. This is a basic calculation engine, not full Excel compatibility. CSV export preserves formula text; quote cells containing commas when editing CSV directly.
+Click a cell to select it, then type to replace its value. Double-click or press F2 to edit existing text; Escape cancels the edit. Enter moves down, Tab moves across, and arrow keys move between cells. Shift+arrows or dragging selects a range. Ctrl+C/V copies and pastes tabular data, including multiline cells. Ctrl+Z/Y undoes or redoes edits, and Fill down (Ctrl+D) copies the top selected row with relative formula references adjusted. The formula bar shows the selected cell source, and its name box jumps to addresses or ranges such as B12 or A1:C10. Formula cells show calculated results until editing. Addresses include the first row: A1 is the top-left cell. Edits autosave after a short pause, including while typing; Ctrl+S saves immediately. Drag column boundaries to resize them, or use Left/Right while a resize handle is focused. Column widths are remembered locally. Freeze row 1 keeps a header visible, and the footer shows selection count, sum, and average. The grid renders a moving window of rows rather than stopping at row 1,000, with up to 10,000 editable rows and 256 columns; spreadsheet-file import truncates beyond those bounds and to 24 sheets, so do not assume omitted data survives export. Calculations update when inputs change. Supported functions include SUM, AVERAGE, MIN, MAX, COUNT, COUNTA, ROUND, ABS, IF and IFERROR, with additional lookup, text, date and statistical functions implemented in `shared/sheet.mjs`; arithmetic, percentages, comparisons, text concatenation, absolute references, and rectangular ranges are supported. Circular references and invalid formulas show cell errors. This is a basic calculation engine, not full Excel compatibility. CSV export preserves formula text; quote cells containing commas when editing CSV directly.
 
 Open **Python** on a spreadsheet. Enter a Python executable (`python`, `py`, or its full executable path) and a script, then click **Run Python**. Python 3 must already be installed; the app does not bundle Python. The executable runs with `-I` (isolated Python startup) and a 30-second limit. Packages must be installed for that interpreter. This is local code execution with your Windows user permissions, including file and network access; it is not a sandbox. Scripts never run automatically on opening, importing, chat, or scheduling.
 
@@ -224,7 +183,7 @@ set_cell("D1", "Cost per lead")
 set_cell("D2", "=IFERROR(ROUND(B2/C2,2),0)")
 ```
 
-Review the proposed cells and choose **Apply to sheet** or **Discard**. Apply is disabled if the sheet changed after the run. File writes and other external side effects performed by Python happen during execution and are not undone by Discard. Sheets/scripts are saved locally; scripts are retained in the workspace JSON, while CSV export contains cells only. Script input and results are limited to 1 MB, 10,000 rows, and 256 columns. The grid displays the first 1,000 rows while calculations/export retain the full data.
+Review the proposed cells and choose **Apply to sheet** or **Discard**. Apply is disabled if the sheet changed after the run. File writes and other external side effects performed by Python happen during execution and are not undone by Discard. Sheets/scripts are saved locally; scripts are retained in the workspace JSON, while CSV export contains cells only. Script input and results are limited to 1 MB, 10,000 rows, and 256 columns. The grid virtualizes rows up to its 10,000-row editing limit; it does not display only the first 1,000 rows. Imported data is subject to the limits above.
 
 ## Google Drive workspace connection
 
@@ -250,7 +209,7 @@ Each device saves independent, immutable change files in `.research-sync`. Separ
 
 Delivery follows Google Drive's sync speed; this app cannot confirm that a change has reached Google's cloud or another PC. The local pending count measures writes waiting for the Drive folder only. During an open shared session, edits are first saved in a device-local outbox and retried when that folder returns. On a fresh launch, a missing Drive folder shows the original local backup read only; keep the folder available offline for reliable startup.
 
-Keep the entire `.research-sync` folder, its baseline, and all change files. History grows with edits and is not automatically compacted, so offline devices can still catch up. The original `workspace.json` remains a migration snapshot; subsequent shared edits live in the change log. Export or **Keep a local copy** for a current standalone snapshot. Old app versions cannot edit the shared format and must be upgraded.
+Keep the entire `.research-sync` folder, its baseline, and all change files. The shared change log can be compacted into a new baseline; startup attempts this for sufficiently large logs. Keep the marker, baseline and remaining changes together so devices can reload after compaction. The original `workspace.json` remains a migration snapshot; subsequent shared edits live in the change log. Export or **Keep a local copy** for a current standalone snapshot. Old app versions cannot edit the shared format and must be upgraded.
 
 Without enabling shared editing, the original format still allows **one PC at a time**. Quit from the tray, let Drive finish syncing, and then open on the next PC. Session markers and changed-file checks are advisory safeguards across asynchronous Drive replicas. Recover a stale session only after closing the other app.
 
@@ -267,7 +226,7 @@ Choose **Sign in with browser**, **API token**, or **No additional sign-in / acc
 
 For your own website, choose **Custom connection**, paste its private MCP endpoint, and select **No additional sign-in / access in URL** if the endpoint already includes access. Use advanced JSON for local commands or HTTP headers. Test connection only initializes MCP and lists tools; it does not invoke them. Do not commit access URLs or tokens. Each device needs its own connection setup, including when projects are stored in Drive.
 
-Select servers in the agent profile’s default MCP list or in the chat **Tools** menu. ChatGPT/OpenAI, Claude API, and Gemini adapters run function tools locally through the app and send results back to the selected model. Tool calls ask for approval by default; optional automatic reads trust the server’s read-only metadata. Write and unclassified operations always ask. Cancellation clears pending approvals and closes sessions. Claude CLI receives only selected app-managed servers in a temporary private configuration; Codex/custom CLI profiles continue using their own configuration.
+Select servers in the agent profile’s default MCP list or in the chat **Tools** menu. ChatGPT/OpenAI, Claude API, and Gemini adapters run function tools locally through the app and send results back to the selected model. Tool calls ask for approval by default; optional automatic reads trust the server’s read-only metadata. Write and unclassified operations ask unless that server has been explicitly set to **Always allow all tools**; see the approval section below. Cancellation clears pending approvals and closes sessions. Claude CLI receives only selected app-managed servers in a temporary private configuration; Codex/custom CLI profiles continue using their own configuration.
 
 Services can impose their own restrictions. For example, [Indeed’s documented MCP access](https://docs.indeed.com/mcp) is scoped to its supported connector; seeing Indeed in another app does not authorize this standalone app. Marketplace availability may change independently of this release.
 
@@ -354,9 +313,9 @@ rw.onReady(async () => {
 const unsubscribe = rw.db.onChange(() => { /* refresh displayed database records */ });
 ```
 
-Image/audio/model assets can be imported into the studio as files containing data URLs. Use their path in HTML `src`, import their URL from JavaScript, or use `rw.files()` / `rw.file(id)` for existing project images. Maps, clickable grid sections, charts, WebGL scenes and canvas games can all use the same runtime and database. WebGL needs a working graphics driver. External network requests, arbitrary computer-file access, Node APIs and arbitrary npm packages remain unavailable to app code. Supported bundled imports are `three`, its addons, and `phaser`; other libraries can be added in future host releases. Apps are limited to 128 files, 2 MB per file, and 12 MB total source/assets. Asset uploads are limited to 1.4 MB before data-URL encoding. Existing database row/query limits still apply.
+Image/audio/model assets can be imported into the studio as files containing data URLs. Use their path in HTML `src`, import their URL from JavaScript, or use `rw.files()` / `rw.file(id)` for existing project images. Maps, clickable grid sections, charts, WebGL scenes and canvas games can all use the same runtime and database. WebGL needs a working graphics driver. External network requests, arbitrary computer-file access, Node APIs and arbitrary npm packages remain unavailable to app code. Supported bundled imports are `three` and its addons, `phaser`, `react` and `react-dom`. Other browser libraries can be included as local source within the package limits; arbitrary package installation is not available. Apps are limited to 128 files, 2 MB per file, and 12 MB total source/assets. Asset uploads are limited to 1.4 MB before data-URL encoding. Existing database row/query limits still apply.
 
-Agents automatically receive `app_list`, `app_create`, `app_read`, `app_edit`, `app_check`, `app_preview`, `app_errors`, and `app_publish`. They can build over many file edits and continue in later chat turns. Exact patches and revision checks avoid overwriting stale source. The UI saves file changes atomically and preserves unrelated changes from an agent/device. Account agents have a bounded 48 tool rounds / 128 calls per run, within the configured timeout; they can resume later. Codex/Claude use the same project tools through the local MCP connection. Custom CLIs retain the legacy single-HTML action format and do not receive a tool adapter automatically. No paid provider calls were used to validate the release; account/CLI routing was verified with deterministic fixtures.
+Agents automatically receive `app_list`, `app_create`, `app_read`, `app_edit`, `app_check`, `app_preview`, `app_errors`, and `app_publish`. They can build over many file edits and continue in later chat turns. Exact patches and revision checks avoid overwriting stale source. The UI saves file changes atomically and preserves unrelated changes from an agent/device. Account agents have a bounded 48 tool rounds / 128 calls per run, within the configured timeout; they can resume later. Codex/Claude use the same project tools through the local MCP connection. Custom CLIs retain the legacy single-HTML action format and do not receive a tool adapter automatically. Automated account/CLI routing tests use deterministic fixtures; this audit did not perform paid provider inference.
 
 Source files and published versions are saved in workspace records and participate in shared Drive synchronization. Readable draft copies are mirrored under `projects/<project-id>/apps/<app-id>/`; editing those mirror files externally does not import changes. Each app uses only its current project's database. Copying app source into another project starts with that project's separate data. No example projects, agents, games or sample records ship in a fresh workspace.
 
@@ -382,7 +341,7 @@ The supported ChatGPT plan connection uses the Codex / ChatGPT Work allowance. I
 
 The **Plugins** page installs optional panels from a folder or ZIP, with a permission review, enable/disable and uninstall controls. **ChatGPT** and **Gemini** are separate optional web-chat plugins. They display the actual provider websites and keep separate local browser sessions. Sign in within each; use their normal chat interfaces or send a shared message to selected web plugins. Supported generated images and downloads can be saved into the selected project automatically. **Ctrl+1** and **Ctrl+2** toggle the first and second recipients in **Send to**; press again to deselect. The shortcuts also work while an embedded chat has focus, and plain digits remain available for typing. Gemini has direct **Model** and **Effort** buttons in its pane header; ChatGPT has **Effort**. They open the signed-in website's actual settings menus, with available choices controlled by that service and account. These web plugins are separate from the ChatGPT/Codex account agent connection. Embedded sign-in, image access and composer automation depend on the provider's website; protected files may require its Download button. No usage limits are bypassed.
 
-Custom plugins can render HTML/CSS/JS panels, including Three.js/Phaser experiences, and request scoped storage, project files, database and agent access. They run without unrestricted Node, host filesystem or external network access. See [PLUGINS.md](PLUGINS.md) for the manifest, SDK, package command and a working project-dice example. Plugins and local sign-ins stay on each device; project files and database data retain Drive synchronization. No plugin is installed automatically in a fresh workspace.
+Custom plugins can render HTML/CSS/JS panels, including Three.js/Phaser experiences, and request scoped storage, project files, database and agent access. They run without unrestricted Node, host filesystem or external network access. See [plugin reference](../PLUGINS.md) for the manifest, SDK, package command and project-dice example. Plugin packages, registry/settings and SDK storage use the selected workspace when it is on Drive; cookies and sign-ins remain on each device. These plugin registry writes are separate from the shared document change log. No plugin is installed automatically in a fresh workspace.
 
 The left sidebar can be hidden/restored from the top toolbar, with its setting remembered locally.
 
@@ -394,27 +353,27 @@ ChatGPT/OpenAI, Claude API and Gemini receive native image content in their requ
 
 Payload formats follow the official [OpenAI image-input guide](https://developers.openai.com/api/docs/guides/images-vision), [Claude vision guide](https://platform.claude.com/docs/en/build-with-claude/vision), and [Gemini image-understanding guide](https://ai.google.dev/gemini-api/docs/image-understanding). Validation uses deterministic provider fixtures rather than paid inference.
 
-## Layered glass appearance (v0.10.2)
+## Appearance
 
-The existing layout now uses dense, softly blurred glass surfaces: charcoal in dark mode and neutral frosted glass in light mode. The sidebar, header and chat float above a quieter work plane, with a compact segmented tool strip. Browser chrome, canvas tools and cards, documents, spreadsheets, app development panels, menus and dialogs share the surface system. Apps using the workspace SDK theme variables follow the selected palette.
+Daevu uses dark and light themes with glass-style panels and a compact tool strip. Browser chrome, canvas tools and cards, documents, spreadsheets, app development panels, menus and dialogs share the surface system. Apps using the workspace SDK theme variables follow the selected palette.
 
 Hover, press, panel, dialog and content transitions use short, subtle motion. The system reduced-motion preference suppresses these effects. Glass is rendered inside the workspace; external webpages and apps with their own styles retain their own content appearance. This does not make the desktop window transparent to other Windows apps.
 
 
 ### Unified AI service connections
 
-All provider accounts and API keys use **Connections → AI connections → Add connection**. Choose OpenAI, Claude, Gemini, OpenRouter, or Custom API from one dialog. Custom APIs support Chat Completions and System One formats, including a TypeSafe/Jev preset. Jev works as a structured decision tool in agent profiles, while chat-capable models remain the agent’s conversational provider. Optional AI website plugins can display the TypeSafe console or another HTTPS tool. See [ACCOUNT-CONNECTIONS.md](ACCOUNT-CONNECTIONS.md#unified-ai-connections-and-custom-services).
+All provider accounts and API keys use **Connections → AI connections → Add connection**. Choose OpenAI, Claude, Gemini, OpenRouter, or Custom API from one dialog. Custom APIs support Chat Completions and System One formats, including a TypeSafe/Jev preset. Jev works as a structured decision tool in agent profiles, while chat-capable models remain the agent’s conversational provider. Optional AI website plugins can display the TypeSafe console or another HTTPS tool. See [account connections](../ACCOUNT-CONNECTIONS.md#unified-ai-connections-and-custom-services).
 
 
 ### Browser assistant plugin
 
-The optional **Browser assistants** plugin adds an **AI** side panel to the Browser tab. It can send the current page’s text and viewport screenshot to a project’s selected model profile, so questions such as “what do you see?” have current tab context. Sharing can be switched off, and browser chats remain separate from the profile’s ordinary conversations. This uses the workspace’s configured model connection, not Chrome’s built-in Gemini session. See [PLUGINS.md](PLUGINS.md#browser-assistants-contextual-side-panel).
+The optional **Browser assistants** plugin adds an **AI** side panel to the Browser tab. It can send the current page’s text and viewport screenshot to a project’s selected model profile, so questions such as “what do you see?” have current tab context. Sharing can be switched off, and browser chats remain separate from the profile’s ordinary conversations. This uses the workspace’s configured model connection, not Chrome’s built-in Gemini session. See [browser assistant plugin](../PLUGINS.md#browser-assistants-contextual-side-panel).
 
-### App logos (local source update)
+### App logos
 
 Each workspace app has its own automatic icon. Open an app, choose **Edit**, then use **App logo → Choose image** to upload a PNG, JPEG or WebP image (up to 5 MB). Images are fitted into a square PNG; **Reset logo** restores the automatic icon. Logos are saved with the app and shown in Home, the Apps list, open app tabs and independent app windows. Newly created Windows shortcuts use the app icon too; recreate an existing shortcut to update its icon. Agents can design an icon directly with `app_edit`, `op: "logo"`, and `icon: {background, radius, paths: [{d, fill, stroke, strokeWidth}]}`. Paths use SVG path commands on a 256 by 256 canvas; colors are hex values or `none`. The host renders a PNG and applies it to the workspace icon, native window, and newly created shortcuts. `app_read` returns `logoDesign` so agents can revise their work. Agents can also assign an embedded PNG app file or a bounded PNG data URL. For example: "Create a mint-and-lime icon for this app and apply it as the app logo."
 
-### Agent chat menu (local source update)
+### Agent chat menu
 
 The effort bar is hidden by default; choose **Effort** in the message box to show it. An explicit show/hide choice is remembered. The **Agents** button in chat opens a contact menu over the workspace to the left of the conversation, with profile pictures, names, recent message previews and times. Search by name or role and select a contact to open its most recent conversation. Escape, the close button or a click outside dismisses the menu. The workspace keeps its width, and native browser views are hidden while the menu is open so they cannot cover it.
 
@@ -437,4 +396,4 @@ Agent drafts are saved per project, agent and conversation, including references
 
 **Pictures.** Paste (Ctrl+V), drop or import (Image button, `/image`, Add image) a picture into a page, a document or the canvas. Pictures are stored as project files, marked so they do not appear as separate cards on the canvas, and sit at a free position: drag to move, drag a corner to resize (the shape is kept), arrow keys nudge, Delete removes. The bar above a selected picture on a page or document sets how text treats it: wraps around it, runs above and below only, or ignores it so the picture sits in front. Which side the text takes depends on which half of the column the picture is in. Text is laid out with [Pretext](https://github.com/chenglou/pretext), one row at a time, so every row can have its own width; `src/flow.js` turns that into the spacers the real text wraps around, and checks the result against what the page actually drew.
 
-**Agent formatting.** Replies and pages written by agents are tidied before they are shown: a table squashed onto one line becomes a real table, `#Heading` gets its space, `•` becomes a bullet, `<br>` becomes a line break, and doubly escaped `\n` becomes real line breaks. In chat, tables, task lists and strikethrough render. On pages and documents a table is its own editable block, nested lists keep their levels (Tab and Shift+Tab change the level), and text shows its bold, italic, code and links until you click into it.
+**Markdown formatting.** The current repair helper is used both for displayed Markdown and block conversion, including user text. It can change literal text and code (a known limitation in this public baseline). It attempts these repairs: a table squashed onto one line becomes a real table, `#Heading` gets its space, `•` becomes a bullet, `<br>` becomes a line break, and doubly escaped `\n` becomes real line breaks. In chat, tables, task lists and strikethrough render. On pages and documents a table is its own editable block, nested lists keep their levels (Tab and Shift+Tab change the level), and text shows its bold, italic, code and links until you click into it.

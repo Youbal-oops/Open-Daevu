@@ -1,116 +1,109 @@
+<!-- Youbal said to fix: clarify project scope, installation, integrations, limitations and development history. -->
 <p align="center">
-  <img src="docs/assets/hero.svg" alt="Daevu: projects, a canvas, a calendar and a team of agents" width="900">
+  <img src="docs/assets/hero.svg" alt="Daevu: projects, a canvas, a calendar and optional agents" width="900">
 </p>
 
 <h1 align="center">Daevu</h1>
 
-<p align="center"><b>Your projects, notes, whiteboard and calendar in one app, with optional AI helpers and tools you can build yourself.</b><br>
-Local-first. Yours. Built for Windows.</p>
+<p align="center">A local-first Windows desktop workspace for projects, documents, spreadsheets, a canvas and a calendar.</p>
 
 <p align="center">
-  <a href="https://github.com/Youbal-oops/Open-Daevu/releases">Download</a> ·
-  <a href="#quick-start">Quick start</a> ·
-  <a href="docs/GUIDE.md">Full guide</a>
+  <a href="https://github.com/Youbal-oops/Open-Daevu/releases/latest">Download</a> ·
+  <a href="docs/GUIDE.md">Guide</a> ·
+  <a href="PLUGINS.md">Plugins</a> ·
+  <a href="https://github.com/Youbal-oops/Open-Daevu/issues/new/choose">Report a bug</a>
 </p>
 
----
+Daevu is for people who want their project notes, source files, planning and small custom tools in one desktop workspace. Projects can have work folders, their own documents, boards, browser tabs and optional agent conversations. You can use the core workspace without an AI account.
 
-## Everything for a project, side by side
+## Project status
 
-Notes, files, boards, a calendar and a team of agents usually live in five different apps. Daevu puts them next to each other. Each project is a room: a page to write on, a whiteboard to think on, a chat with the specialists you picked, and a calendar that knows what everyone is doing.
+The core feature set is complete. Development is focused on bug fixes, performance, reliability and compatibility. New functionality should primarily be built as plugins or project apps; changes to core extension APIs can be discussed when needed.
 
-Nothing leaves your computer unless you send it. Your work sits in plain files, or in a Google Drive folder if you want it on two machines.
+Youbal describes the initial development as roughly six weeks, beginning privately before this public repository was created. Public Git history starts with the 1.0.0 commit on 20 October 2026; it does not represent the full private development period. The project was developed with extensive AI coding assistance. That assistance is part of its history, not a substitute for reviewing changes or recording what was actually tested.
 
-## Think on a whiteboard
+## Install
 
-<p align="center"><img src="docs/assets/canvas.svg" alt="A flowchart building itself, a rough circle turning into a clean shape, sticky notes and a pasted link" width="760"></p>
+1. Open [Releases](https://github.com/Youbal-oops/Open-Daevu/releases/latest).
+2. Download the Windows x64 **Setup.exe** installer, or **Portable.exe** to run without the installer.
+3. Launch Daevu and choose a theme, storage location and whether to enable AI agents. New workspaces start empty.
 
-- Sticky notes, shapes, text, frames and connectors, with size, bold, colour, borders, tilt, layers and lock.
-- Sketch a rough circle or box and it snaps to a clean shape.
-- Press Tab to grow a mind map, or start from a template: brainstorm, retro, SWOT, flowchart, timeline.
-- Drop in documents, spreadsheets, kanban boards, images and links. Each shows its contents right on the board.
-- Stays smooth on big boards. Two-finger scroll pans, pinch and wheel zoom.
-- Drag a connector off a shape, let go on empty space, and pick the next shape to attach.
+The builds are unsigned, so Windows may show a security warning. Check the download's repository and release before deciding whether to run it. Keep a portable EXE in a stable location if you use startup or app shortcuts. Existing releases and their original notes are linked in [release context](docs/RELEASE-NOTES.md).
 
-<p align="center"><img src="docs/assets/canvas.jpg" alt="A flowchart and sticky notes on the board" width="820"></p>
+## Core workspace
 
-## Build your own tools
+- **Pages and documents:** block editing, tables, comments, links, pictures, undo/redo and autosave. Notes can be exported as Markdown.
+- **Spreadsheets:** multiple sheets, formulas, filters, cell references and Excel/ODS/CSV import and export. This is a limited calculation engine, not full Excel compatibility.
+- **Canvas:** shapes, sticky notes, freehand drawing, connectors, templates and embedded project items.
+- **Boards and databases:** Kanban, basic bar/line/area/pie charts, dashboards and project-scoped SQLite tables.
+- **Calendar:** events, tasks, repeats, reminders, week/day views and `.ics` import/export. Agent schedules are optional and need the app running.
+- **Files and browser:** upload source files, preview supported formats, annotate images and keep project browser tabs and saved sources.
 
-Describe what you need and Daevu builds it as a small app that lives inside the project: a budget tracker, a lead dashboard, a map with your own pins, a quiz, even a game.
+Screenshots use sample content and may show earlier navigation. They illustrate the interface, not verified live provider connections.
 
-<p align="center"><img src="docs/assets/apps.gif" alt="Wing Hop, a platformer drawn entirely with Wingdings symbols, playing itself inside a Daevu project and then showing its code" width="820"></p>
-<p align="center"><sub><b>Wing Hop</b>: a small platformer whose every picture is a Wingdings character. It was made with the same app tools your agents use, and it runs right inside the project. <a href="docs/assets/apps.mp4">Watch the sharper video</a> or <a href="plugin-examples/wing-hop">read its source</a>.</sub></p>
+<p align="center"><img src="docs/assets/canvas.jpg" alt="Daevu canvas with a flowchart and sticky notes" width="820"></p>
 
-- **Ask in plain words.** "A loan calculator that reads my rate from the sheet." An agent writes the app, checks that it runs, and fixes its own errors.
-- **Or write it yourself.** An app is one HTML file with a tiny SDK for reading your project's tables, values and images, and for saving its own data between opens.
-- **Safe by default.** Apps run in a sandbox with no network access, so a tool you build can't send your data anywhere.
-- **Open it your way.** Full pane, a pull-out beside your work, or its own window, with its own icon in the launcher.
+## Plugins and project apps
 
-Three.js and Phaser are bundled for 3D scenes and games, and a built-in database keeps an app's records tidy.
+These are different extension types:
 
-## A calendar you can live in
+| Type | Purpose | How it runs |
+| --- | --- | --- |
+| **Project app** | A tracker, calculator, dashboard, game or other tool owned by a project | Local HTML/CSS/JS/TS/JSX files, bundled by the host, with the `rw` SDK for project data and app state |
+| **Workspace plugin** | Reusable panels, board types, file editors, spreadsheet formulas, themes or browser extensions | Installed from a folder, ZIP, supported public GitHub package or the bundled catalog; permissions are reviewed before installation |
 
-<p align="center"><img src="docs/assets/calendar.jpg" alt="The calendar, one long scroll with quick add" width="820"></p>
+Project apps have draft, preview and publish steps. Publishing makes a version available inside Daevu; it does not deploy a website. Apps can open in their own Daevu window and have Windows shortcuts. You can write them yourself or use a configured agent. Three.js, Phaser, React and React DOM are available to the bundler.
 
-Scroll through the months without stopping. Type "Lunch with Sam tomorrow 1pm @Blue Bottle" and it becomes an event. It handles repeats, reminders, several calendars, week and day views, and `.ics` import and export. Scheduled agent work shows up here as well.
+App and HTML-plugin frames restrict direct network and host access; approved SDK operations still read or change project data. Website plugins load external sites, and browser-script plugins execute within matching web pages. Review the permissions and code of extensions you install. See the [app guide](docs/GUIDE.md#app-studio-and-launcher-v0100) and [plugin manifest and SDK](PLUGINS.md).
 
-## Agents that have a job
+<p align="center"><img src="docs/assets/apps.gif" alt="The Wing Hop example running and showing its source inside Daevu" width="820"></p>
 
-<p align="center"><img src="docs/assets/agents.jpg" alt="Agent profiles" width="820"></p>
+[Wing Hop source](plugin-examples/wing-hop) and [project-dice plugin](plugin-examples/project-dice) are examples in this repository, not preinstalled workspace content.
 
-Give each specialist a name, a role and a model. Use your ChatGPT, Gemini or Claude account, an API key, or a command-line tool you already have. They hand work to each other, write findings into your pages, leave comments, link related projects and add events to your calendar. They only use the tools you give them. Prefer to work alone? Switch the helpers off in settings and every trace of them disappears.
+## Optional integrations
 
-## Make it yours
+- **AI agents:** configure an API key, supported account sign-in or installed CLI. Profiles choose models, prompts and tools; access and billing depend on the provider. See [account setup](ACCOUNT-CONNECTIONS.md).
+- **MCP services:** connect and authorize services separately, then choose which tools an agent can use. Provider login does not import another application's connectors.
+- **AI websites:** the ChatGPT and Gemini plugins show the providers' websites with separate browser sessions. They are independent of API/account agents; sign-in and composer automation depend on the websites.
+- **Additional charts and browser assistants:** install the relevant optional plugins from Discover.
+- **Google Drive:** select a workspace folder managed by Drive for desktop. Legacy workspaces use a one-PC-at-a-time workflow; the optional shared-editing format supports simultaneous devices. Drive controls delivery, and conflict review may be needed. See [storage and shared editing](docs/GUIDE.md#google-drive-workspace-connection).
+- **Python:** a manual spreadsheet script panel uses a separately installed Python 3 interpreter. Scripts run with your Windows user permissions, not in an application sandbox.
 
-<p align="center"><img src="docs/assets/plugins.jpg" alt="Plugins" width="820"></p>
+## Data and limitations
 
-- **Plugins** add web chats, panels and tools. Choose an icon, then place each in the sidebar, the tab bar or a pull-out, or lock it to one project.
-- **Connections** reach the public MCP registry, with the logo of every service.
-- **Your tab bar** keeps the tools you reach for in each project: browser, calendar, database, whiteboard.
-- **Pages** are made of blocks, with comments and deep links. Images open with a marker, text and crop. Copy and paste keeps your formatting.
-- **Pictures** can be pasted, dropped or imported into pages, documents and the canvas, then moved anywhere and resized from the corners. On pages and documents the text runs around them. Choose wrap, break or in front from the bar above a selected picture.
-- **Your layout** is yours: drag the grip on the project list or the chat to the other edge, or pull its inner edge to make it wider. Tables, nested lists and bold text that an agent writes show up as they were meant to.
+Workspace data is stored locally by default, including JSON records, document/file copies and project databases. Back up the **entire workspace** while Daevu is closed. A shared Drive workspace also needs its `.research-sync` data. Provider credentials are stored separately with Windows credential protection; project files themselves are not encrypted by Daevu.
 
-## Quick start
+Local-first does not mean network-free. Packaged builds check GitHub for updates automatically. Browsing, provider connections, MCP and optional website plugins contact their services; enabled Drive storage syncs through Drive for desktop. Agent requests include relevant project context. See [data and trust boundaries](SECURITY.md#data-and-trust-boundaries).
 
-Grab the installer from [Releases](https://github.com/Youbal-oops/Open-Daevu/releases), or run it from source with Node.js 24:
+Large documents, imports, spreadsheets and charts can still be slow. Imported spreadsheets are bounded and unsupported formulas may not preserve their original results. Built-in previews do not replace every format's native editor. Third-party sign-in, tools and model availability need verification with your own accounts. Current problems belong in [Issues](https://github.com/Youbal-oops/Open-Daevu/issues); tests and their limits are recorded separately from feature claims.
+
+## Run from source
+
+Use Windows x64 and Node.js 24, matching the Windows build workflow:
 
 ```powershell
+git clone https://github.com/Youbal-oops/Open-Daevu.git
+cd Open-Daevu
 npm ci
 npm run dev
 ```
 
-The first launch walks you through a look, a storage place and whether to turn on AI helpers. Then start a project.
-
-## Shortcuts
-
-| Shortcut | What it does |
-|---|---|
-| Ctrl + B / I / U | Bold, italic, underline while writing |
-| Ctrl + Shift + X, Ctrl + E | Strike-through, code |
-| Ctrl + Alt + 1 / 2 / 3, Ctrl + Alt + 0 | Heading 1 / 2 / 3, plain text |
-| Ctrl + Shift + 7 / 8 / 9 | Numbered, bulleted and to-do lists |
-| Ctrl + Alt + C | Open or close the canvas |
-| Ctrl + Alt + B | Open or close the browser |
-| Ctrl + Alt + A | Open or close apps |
-| Esc | Close the open tool |
-
-## Good to know
-
-- Windows 10 and 11. The installer is unsigned for now.
-- Syncing through Google Drive happens when the app opens, and only one computer can have the workspace open at a time, so two machines never fight.
-- Deleted things go to Trash first.
-
-## Building and testing
+`npm run dev:web` is a browser preview with local browser storage. It does not provide native desktop integrations.
 
 ```powershell
-npm test            # unit tests
-npm run build       # production build
-npm run dist:win    # installer and portable app
+npm run check:docs
+npm test
+npm run build
 ```
 
-Everything else (agents, storage, plugins, formulas, the research browser) is in the [full guide](docs/GUIDE.md).
+See [development and repository layout](docs/DEVELOPMENT.md), [contributing](CONTRIBUTING.md) and [release checks](docs/RELEASING.md). [Historical validation notes](VALIDATION.md) are retained as records of earlier development, not current test guarantees.
+
+## Contributing and security
+
+[Report bugs or compatibility problems](https://github.com/Youbal-oops/Open-Daevu/issues/new/choose) with reproduction steps, app version and Windows version. Small fixes, performance measurements, documentation corrections and extension examples are welcome. Discuss substantial core changes first; [CONTRIBUTING.md](CONTRIBUTING.md) explains the current priorities and review expectations.
+
+For sensitive reports, follow [SECURITY.md](SECURITY.md). Do not post credentials or private workspace contents in issues.
 
 ## License
 
-MIT. See [LICENSE](LICENSE). The Daevu name and logo are not covered, see [TRADEMARKS.md](TRADEMARKS.md). Third-party credits are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+[MIT](LICENSE). The Daevu name and logo have separate [trademark terms](TRADEMARKS.md). [Third-party notices](THIRD-PARTY-NOTICES.md) and the existing visual assets are retained.

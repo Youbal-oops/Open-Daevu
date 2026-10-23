@@ -1,0 +1,46 @@
+# Youbal said to fix: collect reproducible bug reports without private workspace data.
+name: Bug report
+description: Report an error or unexpected behavior in Daevu.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Please use a minimal example. Remove tokens, private URLs and personal workspace content from logs or attachments. Sensitive reports should follow SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: Daevu version or commit
+      placeholder: "For example: 2.0.7 or a Git commit"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Windows version, Setup/Portable/source build, and relevant plugin/provider/CLI versions.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include a small synthetic file or example if it helps.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result and relevant errors
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, workarounds or regression version, with private information removed.
