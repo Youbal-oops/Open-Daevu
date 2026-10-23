@@ -1,6 +1,6 @@
 # Account connections
 
-Implemented in v0.3.0. Open **Connections** in the sidebar, or **Settings → Manage connections**. Then choose a connection and model in an agent profile. Projects, work folders, notes, handoffs, and scheduled tasks use that profile's saved connection.
+Open **Connections** from the profile menu under your name, or **Settings → Agents → Connections → Manage**. Account support originated during private development; this guide describes the current source. Then choose a connection and model in an agent profile. Projects, work folders, notes, handoffs, and scheduled tasks use that profile's saved connection.
 
 ## ChatGPT account
 
@@ -33,7 +33,7 @@ Choose **Sign in with Claude Code**. Claude Code must already be installed and a
 
 Select **Claude account · Installed Claude Code** in an agent profile and choose the saved connection. Model aliases or identifiers are still entered in the CLI model field; Claude account catalogs are not discovered through an undocumented endpoint. Tool permissions belong to this isolated CLI configuration. Selected app-managed MCP connections are supplied through a private temporary configuration; existing CLI configuration is also discovered. Configure defaults through the profile and Tools & MCP. The app does not extract Claude subscription tokens or impersonate another OAuth client.
 
-Alternatively, choose **Connect Claude API key** for direct Messages API access and account-specific models. That adapter uses API billing, text context, notes, delegation, and schedules. It supports the app’s selected MCP function tools, with approval before calls. Built-in web search and local-file reading are unavailable; an authorized MCP server may supply related tools. Subscription eligibility and API credits depend on your Claude plan and provider policy.
+Alternatively, choose **Connect Claude API key** for direct Messages API access and account-specific models. That adapter uses API billing, text context, notes, delegation, and schedules. It supports the app’s selected MCP function tools, with approval before calls. Selected built-in Read/Find/Search project-file tools and Web fetch are available to account/API agents. Provider-native web search is separate and depends on the adapter/model. The current Claude API prompt still says local-file tools are unavailable despite supplying them; this is a known source inconsistency, not a capability guarantee. Subscription eligibility and API credits depend on your Claude plan and provider policy.
 
 Official references: [Claude CLI authentication commands](https://code.claude.com/docs/en/cli-reference), [Claude API authentication](https://platform.claude.com/docs/en/manage-claude/authentication), [Claude plan/SDK access](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan).
 
@@ -51,11 +51,11 @@ Do not commit or share runtime auth folders. The app's source ZIP and EXE packag
 
 ## Voice
 
-Voice is not part of v0.3.0. Account sign-in does not embed a provider's consumer voice interface or guarantee Realtime/Live entitlement. Voice needs its own audio/session integration and supported credentials.
+Direct account/API agent adapters do not implement voice. Optional website plugins can expose the website’s own voice controls. Account sign-in does not embed a provider's consumer voice interface or guarantee Realtime/Live entitlement. Voice needs its own audio/session integration and supported credentials.
 
 ## Verification limits
 
-Automated tests use signed mock OIDC tokens, real loopback callbacks, and deterministic provider responses. Native Electron checks exercise Windows encryption, IPC redaction, browser callback completion, the first-use plan notice, account/model profile selection, research execution, persistence, and sign-out. No live provider account consent or paid inference was performed during development. Complete an actual sign-in in your environment to verify account eligibility, quota, models, and tools.
+Automated tests use signed mock OIDC tokens, real loopback callbacks, and deterministic provider responses. Native Electron checks exercise Windows encryption, IPC redaction, browser callback completion, the first-use plan notice, account/model profile selection, research execution, persistence, and sign-out. This audit did not perform live provider consent or paid inference. Automated fixture results do not establish account eligibility, quota, model access or tool compatibility; verify those with your own configured account.
 
 ## Service connections
 
@@ -66,7 +66,7 @@ MCP and handoff verification uses real SDK transport and local callback fixtures
 
 ## Shared Drive workspaces (v0.8.0)
 
-Shared editing synchronizes research data through Drive, while account bindings, tokens, MCP configuration, and browser sessions stay on each device. Connect accounts and services separately on each PC. Connecting an account on one device does not overwrite another device's binding. Automatic schedules remain assigned to the PC that enabled shared editing to avoid duplicate scheduled work; manual research can run on both. See the README for the one-time format upgrade and conflict recovery.
+Shared editing synchronizes research data through Drive, while account bindings, tokens, MCP configuration, and browser sessions stay on each device. Connect accounts and services separately on each PC. Connecting an account on one device does not overwrite another device's binding. Automatic schedules remain assigned to the PC that enabled shared editing to avoid duplicate scheduled work; manual research can run on both. See the [Drive guide](docs/GUIDE.md#google-drive-workspace-connection) for format upgrades and conflict recovery.
 
 
 ## Unified AI connections and custom services

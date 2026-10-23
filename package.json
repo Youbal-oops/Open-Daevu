@@ -16,7 +16,8 @@
     "dist:win": "npm run build && electron-builder --win nsis portable --x64 --publish never",
     "test:web-chat": "node scripts/test-web-chat.cjs",
     "test:ui": "node scripts/test-ui-smoke.cjs",
-    "test:welcome": "node scripts/test-onboarding.cjs"
+    "test:welcome": "node scripts/test-onboarding.cjs",
+    "check:docs": "node scripts/check-docs.cjs"
   },
   "dependencies": {
     "@automerge/automerge": "^3.5.0",

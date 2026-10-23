@@ -16,3 +16,26 @@ client_secret*.json
 
 # Local assistant settings
 .claude/
+
+# Existing tracked build icons and documentation media intentionally remain tracked.
+!.env.example
+!.env.*.example
+*.pfx
+*.p12
+*.pem
+*.key
+/workspace/
+/databases/
+/web-chat-drafts/
+/app-icons/
+/storage.json
+/updates.json
+/.research-sync/
+/.research-session.json
+.codex/auth.json
+.codex/config.toml
+.aws/
+.vs/
+.DS_Store
+Thumbs.db
+Desktop.ini

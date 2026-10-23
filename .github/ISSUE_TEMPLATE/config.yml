@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security reporting
+    url: https://github.com/Youbal-oops/Open-Daevu/blob/main/SECURITY.md
+    about: Read the private-reporting fallback before posting sensitive details.
+  - name: Contributions and extension ideas
+    url: https://github.com/Youbal-oops/Open-Daevu/blob/main/CONTRIBUTING.md
+    about: Core stabilization is the priority; prefer plugins and project apps for new functionality.

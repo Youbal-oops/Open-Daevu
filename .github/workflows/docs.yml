@@ -1,0 +1,23 @@
+name: Check documentation
+on:
+  pull_request:
+    paths:
+      - '**/*.md'
+      - 'docs/assets/**'
+      - 'scripts/check-docs.cjs'
+      - 'tests/documentation.test.cjs'
+      - 'package*.json'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/check-docs.cjs
+      - run: node --test tests/documentation.test.cjs

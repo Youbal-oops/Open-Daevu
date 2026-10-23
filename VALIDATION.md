@@ -1,3 +1,11 @@
+# Historical validation records
+
+The original records below are preserved as written. They describe earlier development snapshots, including private pre-1.0 versions, and are not a current test report. “Unreleased” and statements about build/push/tag automation refer to the context in which each note was written; they are not current release status. Public releases start at 1.0.0, and the current Windows workflow is manually dispatched.
+
+Test counts and reported native checks below were not independently re-run against their original revisions during this documentation audit. For this audit’s actual results and limits, see [PUBLIC-REPOSITORY-AUDIT.md](docs/PUBLIC-REPOSITORY-AUDIT.md). For current usage, see the [guide](docs/GUIDE.md).
+
+---
+
 # Verification - 19 October 2026
 
 ## v0.11.3 - 19 October 2026

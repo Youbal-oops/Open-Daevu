@@ -1,6 +1,6 @@
 # Workspace plugins
 
-Plugins are optional, device-local extensions to Daevu. They are separate from agent profiles and MCP connections. Open **Plugins** to install either **ChatGPT** or **Gemini** independently, or install a custom folder/ZIP or public GitHub repository. Review its permissions before installation. The sidebar shows up to three enabled plugins; the Plugins menu lists everything installed. Disable closes its native web panels; uninstall removes its package and plugin settings, while project files and database records remain.
+Plugins are optional extensions to Daevu. In local mode they are stored in the device profile; with a Drive workspace the package registry, settings and plugin SDK storage are stored in that workspace’s `plugins/` folder. Website cookies/sign-ins remain device-local. They are separate from agent profiles and MCP connections. Open **Plugins** from the profile menu to install either **ChatGPT** or **Gemini** independently, or install a custom folder/ZIP or public GitHub repository. Review its permissions before installation. The sidebar shows up to three enabled plugins; the Plugins menu lists everything installed. Disable closes its native web panels; uninstall removes its package and plugin settings, while project files and database records remain.
 
 ## ChatGPT and Gemini
 
@@ -10,7 +10,7 @@ The shared workspace composer is shown by default and hides the website’s comp
 
 Press **Enter** to send to all checked chats; **Shift+Enter** inserts a new line. Use **Attach files & images**, paste images/files, or drop files on the shared composer. Review or remove attachments before sending. Up to eight files, 20 MB per file and 40 MB combined, can be sent through each selected website's normal upload control; each provider's supported formats and account limits still apply. Attachments can be sent without text. The sender waits for uploads and an enabled Send button and confirms submission. Results name each provider, and a partial failure leaves the draft with only failed providers selected for retry. Already staged files are reused on that retry. An unconfirmed submission asks you to check that conversation before retrying. Gemini's sidebar stays hidden in compact view without repeatedly clicking its menu; Show website controls restores it.
 
-The local Gemini follow-up uses native Chromium text insertion and sends through one provider at a time to avoid competing for editor focus. Upload checks are limited to the message composer. Each provider's result appears as soon as it finishes, and a stalled send times out instead of leaving the shared composer permanently busy. These are source changes pending an explicitly requested build/release.
+The local Gemini follow-up uses native Chromium text insertion and sends through one provider at a time to avoid competing for editor focus. Upload checks are limited to the message composer. Each provider's result appears as soon as it finishes, and a stalled send times out instead of leaving the shared composer permanently busy. These paths are implemented in source; signed-in website compatibility still needs live verification.
 
 Select a project in the plugin toolbar. With **Save downloads** enabled, downloads initiated by that plugin are saved into that project’s **Files**. Generated images exposed in supported assistant-message elements are checked periodically while the plugin is visible. **Save images** checks immediately. Identical content from the same plugin is not repeatedly saved. Images protected from page access, documents that haven't been downloaded, and provider layout changes may require using the website's Download button. Saving inline images supports PNG/JPEG/WebP/GIF up to 3 MB each; downloads are capped at 100 MB. Auto-save off uses the normal download dialog. Project files participate in the existing Drive synchronization; website conversations remain at their provider.
 
@@ -39,11 +39,11 @@ Package a folder using the repository's Node runtime:
 node scripts/package-plugin.cjs plugin-examples/project-dice project-dice.zip
 ```
 
-The folder and ZIP paths use the same validation: 128 files including the manifest, 2 MB per file, 12 MB source/assets total; ZIP input is capped at 16 MB. ZIP CRCs, duplicate case-insensitive paths, traversal, encryption and symbolic links are checked. A package must compile before its install review appears. Updating preserves plugin settings/state and asks you to review the new permission list. Plugin installation and cookie sessions are device-local and must be repeated on another PC.
+The folder and ZIP paths use the same validation: 128 files including the manifest, 2 MB per file, 12 MB source/assets total; ZIP input is capped at 16 MB. ZIP CRCs, duplicate case-insensitive paths, traversal, encryption and symbolic links are checked. A package must compile before its install review appears. Updating preserves plugin settings/state and asks you to review the new permission list. With Drive storage, wait for the plugin package and registry to sync before using them on another PC. Sign in separately on each device. Concurrent edits to plugin installation/settings are not merged through the shared document change log.
 
 ## Adding to the app
 
-Besides panels, a plugin can add to features the app already has. Declare what it adds under `contributes` (`boards`, `fileEditors`, `sheetFunctions`, `themes`, `browser`); a plugin with contributions needs no panel. Each contribution is a page the plugin ships, run in the same sandbox as a panel and given the same `window.workspacePlugin`.
+Besides panels, a plugin can add to features the app already has. Declare what it adds under `contributes` (`boards`, `fileEditors`, `sheetFunctions`, `themes`, `browser`); a plugin with contributions needs no panel. Board and file-editor contributions ship pages with `window.workspacePlugin`. Spreadsheet functions and themes are declarative; browser contributions run in the research browser with their own permissions.
 
 ```json
 {
@@ -80,7 +80,7 @@ const { base64 } = await sdk.files.read(id);
 await sdk.files.update(id, newBase64);        // replaces the file's contents, up to 12 MB
 ```
 
-`files:edit` is shown in the install review because it lets a plugin change files that already exist.
+`files:edit` is shown in the install review because it lets a plugin replace existing file bytes. This source version has no file-version restore for those edits; keep a backup of important originals.
 
 **Spreadsheet functions** are formulas defined by an expression over named arguments, so they run inside the sheet and need no code or permission. Names are capitals; the built-in functions always win.
 
@@ -107,7 +107,7 @@ await sdk.files.update(id, newBase64);        // replaces the file's contents, u
 }
 ```
 
-Styles and scripts run when a page finishes loading. Blocks stop matching requests before they are sent. A tool becomes a button in the browser's address bar row; it runs on the open page and shows what its code returns under the page.
+Styles and scripts run when a page finishes loading. Scripts and toolbar tools execute in the page’s main JavaScript world: they can read matching page content and use its network capabilities. A `"*"` match applies broadly; this is different from an opaque HTML-plugin frame. Blocks stop matching requests before they are sent. A tool becomes a button in the browser's address bar row; it runs on the open page and shows what its code returns under the page.
 
 The statistics, business and science charts are ordinary plugins of this kind, kept in `bundled-plugins/chart-*` and installed from Plugins, Discover. Their code lives only in those folders: with a plugin off, none of it runs, and boards made with it show a note in place of the chart until you turn it back on. Each board entry can carry a `sample` (starting CSV for a new board). Plugin pages can import `react` and `react-dom` as well as `three` and `phaser`, and `.mjs`, `.jsx` and `.css` files.
 
@@ -141,7 +141,7 @@ The host binds calls to the displayed plugin, panel and selected project. A plug
 
 Database read/write permissions are separate. These explicit plugin permissions govern plugin database operations; app-specific row permissions continue to govern app code. The agent SDK returns public profile fields, not provider credentials or CLI arguments. Agent runs retain the workspace's existing tool policies, offline handling and project scoping.
 
-Plugin HTML runs in an opaque sandbox with no Node, direct host filesystem, external network or parent-page DOM access. Files and database records use the workspace's normal persistence; local plugin preferences and `storage` do not synchronize through Drive. Use the database or project files for durable cross-device plugin data. The initial SDK offers panels, project-change events, project data, agent access and local state; additional host capabilities can be added in later API versions.
+Plugin HTML runs in an opaque sandbox with no Node, direct host filesystem, external network or parent-page DOM access. Files and database records use the workspace's normal persistence; the plugin registry/settings and `storage` follow the workspace’s plugin folder in Drive mode. Browser cookies, website sign-ins and device UI preferences do not. Prefer database records or project files for data that needs the workspace’s shared-editing semantics. The initial SDK offers panels, project-change events, project data, agent access and local state; additional host capabilities can be added in later API versions.
 
 ## Sidebar
 
