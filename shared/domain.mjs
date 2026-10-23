@@ -90,6 +90,19 @@ const BUILTIN_TOOLS = [
   { id: 'builtin:Glob', name: 'Find files', pattern: 'Glob', detail: 'Find files by name.' },
   { id: 'builtin:Grep', name: 'Search file contents', pattern: 'Grep', detail: 'Search text inside files.' }
 ];
+// Which tools an agent can be given. Returns '' when it can, otherwise the reason it cannot.
+const API_PROVIDERS = ['chatgpt', 'gemini', 'openai-api', 'claude-api', 'openrouter', 'compatible'], API_BUILTIN_TOOLS = ['builtin:Read', 'builtin:Glob', 'builtin:Grep', 'builtin:WebFetch'];
+function toolBlock(tool, agent) {
+  if (tool.id === 'workspace:database') return '';
+  if (API_PROVIDERS.includes(agent.provider)) {
+    if (tool.kind === 'mcp' || API_BUILTIN_TOOLS.includes(tool.id)) return '';
+    if (tool.id === 'builtin:WebSearch') return 'Web search for this connection is switched on in the agent profile.';
+    return 'Custom tool patterns only apply to the Claude command-line tool.';
+  }
+  if (tool.managed && ['codex', 'custom'].includes(agent.provider)) return 'Daevu manages this server for Claude only.';
+  if (tool.kind !== 'mcp' && !['claude', 'codex', 'custom'].includes(agent.provider)) return 'This connection cannot run built-in tools.';
+  return '';
+}
 const safeServer = name => String(name).replace(/[^a-zA-Z0-9_-]/g, '_');
 // Selected tool IDs become Claude --allowedTools patterns.
 function toolPatterns(toolIds = [], custom = []) {
@@ -844,4 +857,4 @@ function normalizeSchedule(state, input, previous, from = new Date()) {
   if (schedule.enabled && schedule.mode === 'once' && changed && Date.parse(schedule.at) <= new Date(from).getTime()) throw new Error('Choose a one-time date in the future.');
   return schedule;
 }
-export { isArchived, saveNoteRecord, REF_PATTERN, RW_SDK_DOC, newRefId, resolveRef, evaluateFormula, evaluateExpression, kpiValue, listReferences, referencedValues, DB_PROPERTY_TYPES, PAGE_COVERS, SHAPES, layoutDiagram, BLOCK_TYPES, HOME_VIEWS, EFFORTS, BUILTIN_TOOLS, CANVAS_TYPES, ARTIFACT_KINDS, toolPatterns, effortGuidance, id, rolePrompt, parseActions, buildArgs, extractReply, csvParse, csvStringify, makeSeed, applyMutation, nextOccurrence, normalizeSchedule, normalizeBrowserURL, projectPath, projectBranch };
+export { toolBlock, isArchived, saveNoteRecord, REF_PATTERN, RW_SDK_DOC, newRefId, resolveRef, evaluateFormula, evaluateExpression, kpiValue, listReferences, referencedValues, DB_PROPERTY_TYPES, PAGE_COVERS, SHAPES, layoutDiagram, BLOCK_TYPES, HOME_VIEWS, EFFORTS, BUILTIN_TOOLS, CANVAS_TYPES, ARTIFACT_KINDS, toolPatterns, effortGuidance, id, rolePrompt, parseActions, buildArgs, extractReply, csvParse, csvStringify, makeSeed, applyMutation, nextOccurrence, normalizeSchedule, normalizeBrowserURL, projectPath, projectBranch };

@@ -1,5 +1,6 @@
 const {loadImage,IMAGE_EXT}=require('./chat-images.cjs');
 const { workspaceTools, workspaceMap } = require('./workspace-tools.cjs');
+const { builtinTools } = require('./builtin-tools.cjs');
 const spawn = require('cross-spawn');
 const {agentBinding,agentOffline,usageLimit,cliFailure}=require('../shared/agent-status.mjs');
 const path = require('node:path');
@@ -184,6 +185,8 @@ ${workspaceMap(state)}`;
       if(agent.decisionConnectionId)functions.push({name:'jev_decide',description:'Evaluate supplied project data using Jev, a structured decision model. Returns choices, scores or yes probabilities, never free-form text. It cannot browse or gather data: supply the relevant state. Each call uses the configured decision API account.',parameters:{type:'object',properties:{state:{type:['string','object','array']},questions:{type:'object',additionalProperties:{type:'object',properties:{type:{type:'string',enum:['noul','choice','score','box']},instructions:{type:['string','object','array']},criteria:{}},required:['type','instructions'],additionalProperties:false}}},required:['state','questions'],additionalProperties:false},call:r=>{if(!this.providerRuntime?.accounts)throw Error('Account connections are unavailable.');return this.providerRuntime.accounts.evaluate(agent.decisionConnectionId,{state:r.state,questions:r.questions,model:agent.decisionModel},signal);}});
       if(this.apps)functions.push(...this.apps.functions(projectId));
       functions.push(...workspaceTools(this.store,projectId,agent));
+      // Account and API connections have no command-line tools, so the built-in ones they were given are offered as functions.
+      if(DIRECT_PROVIDERS.has(agent.provider))functions.push(...builtinTools(this.store,projectId,chosenTools));
       for(const fn of functions){const call=fn.call;fn.call=async r=>{if(signal.aborted)throw Error('Run stopped.');return call(r);};}
       if(DIRECT_PROVIDERS.has(agent.provider)) {
         if(!this.providerRuntime)throw new Error('Account connections are unavailable.');

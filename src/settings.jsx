@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Settings2, Palette, Bot, HardDrive, Download, Info, Sun, Moon, Check, ChevronsUpDown, Power, User, Link2, RefreshCw, FolderOpen, X, PanelLeft, PanelRight, Pencil, Trash2 } from 'lucide-react';
+import { Settings2, Palette, Bot, HardDrive, Download, Info, Sun, Moon, Check, ChevronsUpDown, Power, User, Link2, RefreshCw, FolderOpen, X, PanelLeft, PanelRight, Pencil, Trash2, Puzzle, Wrench } from 'lucide-react';
 import { api } from './api';
 import { UserAvatar } from './ui';
 import { useDock } from './dock';
 import { useInstalledPlugins, pluginThemes } from './chart-kinds';
 
 // The menu that opens from your name at the bottom of the project list.
-export function ProfileMenu({ settings, theme, storage, update, onProfile, onSettings, onConnections, onTheme, onUpdates }) {
+export function ProfileMenu({ settings, theme, storage, update, onProfile, onSettings, onConnections, onTools, onPlugins, onTheme, onUpdates }) {
   const [open, setOpen] = useState(false), root = useRef(null);
   useEffect(() => {
     if (!open) return;
@@ -21,6 +21,8 @@ export function ProfileMenu({ settings, theme, storage, update, onProfile, onSet
       <div className="profile-menu-head"><UserAvatar settings={settings}/><div><strong>{settings.userName || 'My workspace'}</strong><small>{where}</small></div></div>
       <button role="menuitem" onClick={go(onProfile)}><Pencil size={15}/>Edit profile</button>
       <button role="menuitem" onClick={go(onSettings)}><Settings2 size={15}/>Settings<kbd>Ctrl ,</kbd></button>
+      <button role="menuitem" onClick={go(onPlugins)}><Puzzle size={15}/>Plugins</button>
+      <button role="menuitem" onClick={go(onTools)}><Wrench size={15}/>Tools & MCP</button>
       <button role="menuitem" onClick={go(onConnections)}><Link2 size={15}/>Connections</button>
       <div className="profile-menu-theme" role="group" aria-label="Appearance">
         {[['light', Sun, 'Light'], ['dark', Moon, 'Dark']].map(([value, Icon, label]) => <button key={value} type="button" className={theme === value ? 'on' : ''} aria-pressed={theme === value} onClick={() => onTheme(value)}><Icon size={14}/>{label}</button>)}

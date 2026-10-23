@@ -80,3 +80,5 @@
 .board-pick button{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;text-align:left;border:1px solid var(--border-soft)}.board-pick button:hover{background:var(--hover)}
 .board-pick small{color:var(--muted)}.board-pick-empty{color:var(--muted);padding:10px 2px}
 .pick-search{width:100%;padding:9px 12px;margin:2px 0 10px;border-radius:10px;border:1px solid var(--border);background:var(--input);color:var(--text)}
+.tool-agent.blocked{opacity:.2;filter:grayscale(1);cursor:not-allowed}.tool-agent.blocked:hover{opacity:.3}
+.popover-actions{display:flex;gap:10px}
