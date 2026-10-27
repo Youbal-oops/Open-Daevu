@@ -1,6 +1,8 @@
 name: Build macOS app
 on:
   workflow_dispatch:
+  push:
+    branches: [feature/macos-build]
 permissions:
   contents: read
 jobs:
