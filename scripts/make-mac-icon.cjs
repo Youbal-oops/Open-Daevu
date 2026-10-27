@@ -10,6 +10,8 @@ const target = path.join(build, 'icon.icns');
 const sizes = [16, 32, 128, 256, 512];
 
 app.disableHardwareAcceleration();
+// Closing each render window must not quit the app before the next size is drawn.
+app.on('window-all-closed', () => {});
 app.whenReady().then(async () => {
   let temp;
   try {
