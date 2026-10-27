@@ -20,8 +20,8 @@ function pickAsset(assets, portable, version) {
 const trusted = url => { try { const u = new URL(url); return u.protocol === 'https:' && DOWNLOAD_HOSTS.some(h => u.hostname === h || u.hostname.endsWith('.' + h)); } catch { return false; } };
 
 class Updates {
-  constructor({ version, fetch, userData, downloads, portable = false, onChange }) {
-    Object.assign(this, { version, fetch, downloads, portable, onChange });
+  constructor({ version, fetch, userData, downloads, portable = false, platform = process.platform, onChange }) {
+    Object.assign(this, { version, fetch, downloads, portable, platform, onChange });
     this.file = path.join(userData, 'updates.json');
     this.state = { current: version, checking: false, available: null, progress: null, downloaded: null, error: '' };
     try { this.prefs = JSON.parse(fs.readFileSync(this.file, 'utf8')); } catch { this.prefs = {}; }
@@ -30,6 +30,8 @@ class Updates {
   set(patch) { this.state = { ...this.state, ...patch }; this.onChange?.(this.state); }
   async check({ manual = false } = {}) {
     if (this.state.checking) return this.state;
+    // Releases only carry Windows installers, so other platforms update by downloading from the releases page.
+    if (this.platform !== 'win32') { if (manual) this.set({ error: 'Automatic updates are only available in the Windows build. Download newer versions from the GitHub releases page.' }); return this.state; }
     this.set({ checking: true, error: '' });
     try {
       const response = await this.fetch(LATEST, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Daevu-updater' } });

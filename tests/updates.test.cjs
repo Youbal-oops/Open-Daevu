@@ -99,3 +99,13 @@ test('double-clicking download shares one writer, and install rechecks bytes on 
   await assert.rejects(updates.verifyDownloaded(), /checksum changed/);
   assert.equal(updates.state.downloaded, null);
 });
+
+test('non-Windows copies do not offer the Windows installer', async () => {
+  let called = false;
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'upd-'));
+  const updates = new Updates({ version: '1.0.1', platform: 'darwin', userData: dir, downloads: path.join(dir, 'dl'), fetch: async () => { called = true; return json(release('v1.0.2')); } });
+  const state = await updates.check({ manual: true });
+  assert.equal(called, false);
+  assert.equal(state.available, null);
+  assert.match(state.error, /Windows build/);
+});

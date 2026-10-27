@@ -54,3 +54,15 @@ The app packages the allowlisted runtime paths in `package.json`, not the entire
 - [Audit](PUBLIC-REPOSITORY-AUDIT.md): source evidence, changes and remaining concerns from this cleanup.
 
 When changing a behavior, update its canonical explanation and link from other documents. Keep past test counts attached to their original context. A maintained guide should not require readers to assemble current behavior from old release notes.
+
+## macOS build (experimental)
+
+Run on an Apple Silicon Mac with Node.js 24: `npm ci`, then `npm run dist:mac`. This builds the app, renders `build/icon.icns` from `build/icon.svg` with `iconutil` (`npm run icon:mac`), and writes a DMG and ZIP to `release/`. The manual [macOS workflow](../.github/workflows/macos.yml) does the same on a GitHub-hosted runner and uploads the files as artifacts.
+
+Known limits, none of which have been verified on real hardware:
+
+- The app is ad-hoc signed (`identity: "-"`), not signed with a Developer ID or notarized. Gatekeeper will block it on first launch; open it with right-click > Open, or run `xattr -dr com.apple.quarantine /Applications/Daevu.app` after copying it.
+- Only arm64 is built. An Intel build needs a separate x64 runner so the matching `@esbuild/darwin-x64` package is installed.
+- The updater only handles Windows installers, so the Mac build shows a message instead of offering an update. Launch at login, Windows shortcuts and in-app uninstall are Windows-only.
+- The spreadsheet Python panel defaults to the command `python`; macOS usually provides `python3`.
+- Unit tests run on Windows only so far; the UI and native scripts under `scripts/` have not been run on macOS.
