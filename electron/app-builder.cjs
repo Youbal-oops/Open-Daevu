@@ -1,6 +1,6 @@
 const path = require('node:path');
 const fs = require('node:fs');
-if(__dirname.includes('app.asar') && process.platform==='win32')process.env.ESBUILD_BINARY_PATH=require.resolve('@esbuild/win32-x64/esbuild.exe').replace('app.asar','app.asar.unpacked');
+if(__dirname.includes('app.asar')){const win=process.platform==='win32';process.env.ESBUILD_BINARY_PATH=require.resolve(`@esbuild/${process.platform}-${process.arch}/${win?'esbuild.exe':'bin/esbuild'}`).replace('app.asar','app.asar.unpacked');}
 const esbuild = require('esbuild');
 const {parse,serialize,parseFragment}=require('parse5');
 const {validateFiles, appPath} = require('../shared/app-project.mjs');

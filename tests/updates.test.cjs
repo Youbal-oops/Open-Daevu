@@ -24,7 +24,7 @@ test('the right installer is chosen, and only GitHub downloads are trusted', () 
 
 const release = (tag, size = 5) => ({ tag_name: tag, body: 'Notes', html_url: 'https://github.com/r', assets: [{ name: `Daevu-${tag.replace(/^v/, '')}-x64-Setup.exe`, size, digest: digest('abcde'), browser_download_url: 'https://github.com/a/Daevu-Setup.exe' }] });
 const json = body => ({ ok: true, status: 200, json: async () => body });
-const make = (version, fetch) => { const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'upd-')); return { updates: new Updates({ version, userData: dir, downloads: path.join(dir, 'dl'), fetch }), dir }; };
+const make = (version, fetch) => { const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'upd-')); return { updates: new Updates({ version, platform: 'win32', userData: dir, downloads: path.join(dir, 'dl'), fetch }), dir }; };
 const file = (size, chunks) => async url => url.includes('api.github') ? json(release('v1.0.2', size)) : { ok: true, status: 200, headers: { get: () => String(size) }, body: (async function* () { yield* chunks; })() };
 
 test('an older copy is told about a newer release, and a current one is not', async () => {
@@ -98,4 +98,14 @@ test('double-clicking download shares one writer, and install rechecks bytes on 
   fs.writeFileSync(target, 'other');
   await assert.rejects(updates.verifyDownloaded(), /checksum changed/);
   assert.equal(updates.state.downloaded, null);
+});
+
+test('non-Windows copies do not offer the Windows installer', async () => {
+  let called = false;
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'upd-'));
+  const updates = new Updates({ version: '1.0.1', platform: 'darwin', userData: dir, downloads: path.join(dir, 'dl'), fetch: async () => { called = true; return json(release('v1.0.2')); } });
+  const state = await updates.check({ manual: true });
+  assert.equal(called, false);
+  assert.equal(state.available, null);
+  assert.match(state.error, /Windows build/);
 });

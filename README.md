@@ -27,6 +27,8 @@ I started developing Daevu privately on 4 September 2026. This repository is its
 2. Download the Windows x64 **Setup.exe** installer, or **Portable.exe** to run without the installer.
 3. Launch Daevu and choose a theme, storage location and whether to enable AI agents. New workspaces start empty.
 
+A macOS (Apple Silicon) build can be produced from source with `npm run dist:mac` or the manual [macOS workflow](.github/workflows/macos.yml). It is experimental: CI builds it and runs the unit tests on macOS, but launching it on a Mac has not been verified here. It is only ad-hoc signed, and the in-app updater and Windows shortcuts are not available on it. See [DEVELOPMENT.md](docs/DEVELOPMENT.md#macos-build-experimental).
+
 The builds are unsigned, so Windows may show a security warning. Check the download's repository and release before deciding whether to run it. Keep a portable EXE in a stable location if you use startup or app shortcuts. Existing releases and their original notes are linked in [release context](docs/RELEASE-NOTES.md).
 
 ## Core workspace

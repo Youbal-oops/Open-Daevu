@@ -39,3 +39,5 @@ client_secret*.json
 .DS_Store
 Thumbs.db
 Desktop.ini
+build/icon.icns
+build/icon.iconset/
