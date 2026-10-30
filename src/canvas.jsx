@@ -11,6 +11,8 @@ import { calculateSheet, columnName, sheetContext } from '../shared/sheet.mjs';
 import { workbookOf, projectSheetContext } from '../shared/workbook.mjs';
 import { uid, now, date, excerpt, Markdown } from './ui';
 import { ingestFiles, usePicture, IMAGE_TYPES } from './float-images';
+import { BlockDoc } from './block-doc';
+import { markdownToBlocks, blocksToMarkdown } from '../shared/blocks.mjs';
 import { ArtifactPreview, NewBoardItems, kindIcon, newArtifact } from './boards';
 import { useContextMenu, copyText } from './context-menu';
 import { api } from './api';
@@ -89,9 +91,29 @@ export function SheetEmbed({ note, h, project }) {
   const more = shownRows < totalRows || cols < totalCols || rows.length > SHEET_MAX.rows;
   return <><div className="embed-sheet nowheel" onScroll={grow}><table><thead><tr><th scope="col"><span className="sr-only">Row</span></th>{Array.from({ length: cols }, (_, x) => <th key={x}>{columnName(x)}</th>)}</tr></thead><tbody>{Array.from({ length: shownRows }, (_, y) => <tr key={y}><th>{y + 1}</th>{Array.from({ length: cols }, (_, x) => <td key={x}><Cell raw={String(rows[y]?.[x] ?? '')} shown={values[y]?.[x]} onCommit={v => set(y, x, v)}/></td>)}</tr>)}</tbody></table></div>{more && <div className="embed-more">{shownRows} of {rows.length > SHEET_MAX.rows ? `${rows.length} rows (first ${SHEET_MAX.rows} load)` : `${totalRows} rows`} · {cols} of {totalCols} columns · scroll for more, or open it in a tab</div>}</>;
 }
-// A document on the canvas shows its text; double-click opens it to edit in a tab, where it has the full editor.
+// A document on the canvas shows its text; double-click edits it in place with the same block editor the tab uses.
 export function DocEmbed({ note, h }) {
-  return <div className="embed-doc nowheel" onDoubleClick={() => h.current.open(note.id)} title="Double-click to open and edit"><Markdown>{note.content || '*Double-click to start writing.*'}</Markdown></div>;
+  const [editing, setEditing] = useState(false);
+  if (editing) return <DocEdit note={note} h={h} onDone={() => setEditing(false)}/>;
+  return <div className="embed-doc nowheel" onDoubleClick={() => setEditing(true)} title="Double-click to edit"><Markdown>{note.content || '*Double-click to start writing.*'}</Markdown></div>;
+}
+// Typing is saved a moment after you pause, when focus leaves the card, and when it closes.
+function DocEdit({ note, h, onDone }) {
+  const [blocks, setBlocks] = useState(() => note.format === 'blocks' && note.blocks ? note.blocks : markdownToBlocks(note.content || ''));
+  const pending = useRef(null), timer = useRef(0), latest = useRef({ note, h });
+  latest.current = { note, h };
+  const flush = useCallback(() => {
+    clearTimeout(timer.current);
+    if (!pending.current) return;
+    const next = pending.current; pending.current = null;
+    latest.current.h.current.saveNote({ ...latest.current.note, format: 'blocks', blocks: next, content: blocksToMarkdown(next), updatedAt: now() });
+  }, []);
+  useEffect(() => flush, [flush]);
+  const change = next => { setBlocks(next); pending.current = next; clearTimeout(timer.current); timer.current = setTimeout(flush, 700); };
+  return <div className="embed-doc embed-doc-edit nodrag nowheel" onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) flush(); }}>
+    <button className="embed-done" onClick={() => { flush(); onDone(); }}><Check size={12}/>Done</button>
+    <BlockDoc blocks={blocks} onChange={change} projectId={h.current.projectId}/>
+  </div>;
 }
 // Zoomed far out, cards collapse to a simple icon so a large board stays readable.
 const useFar = () => useStore(s => s.transform[2] < 0.4);
@@ -406,6 +428,7 @@ function CanvasInner({ project, onOpen, onFile, onOpenArtifact, act, onImport, o
     },
     deleteItem: id => { remember(); act({ type: 'canvas:item:delete', projectId: project.id, value: id }).catch(() => {}); },
     openDiagram: id => { const item = (project.canvas || []).find(c => c.id === id); if (item) { remember(); setDiagram(item); } },
+    projectId: project.id,
     saveNote: note => act({ type: 'note', projectId: project.id, value: note }).catch(() => {}),
     toggleEmbed: note => { const size = note.size || docSize(note); board({ layout: [{ id: note.id, size, embed: !isEmbedded(note) }] }); },
     resized: (id, p) => board({ positions: [{ id, position: { x: p.x, y: p.y } }], layout: [{ id, size: { w: p.width, h: p.height } }] }),

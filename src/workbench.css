@@ -1,7 +1,6 @@
-.app-shell.workbench-layout{padding:8px;gap:0}
-.workbench-layout>.sidebar{border-radius:9px 0 0 9px;border-right:0;box-shadow:none}
-.workbench-layout>.workspace-shell{position:relative;padding-left:42px;border:1px solid var(--glass-edge,var(--border));border-radius:0 9px 9px 0;gap:0;background:var(--work-plane,var(--panel))}
-.workbench-layout.sidebar-collapsed>.workspace-shell{border-radius:9px}
+.app-shell.workbench-layout{padding:8px;gap:8px}.app-shell.workbench-layout.sidebar-collapsed{gap:0}
+.workbench-layout>.sidebar{border-radius:12px;border:1px solid var(--border);box-shadow:0 3px 14px rgba(0,0,0,.22)}
+.workbench-layout>.workspace-shell{position:relative;padding-left:42px;border:1px solid var(--glass-edge,var(--border));border-radius:12px;gap:0;background:var(--work-plane,var(--panel))}
 .workbench-layout .topbar{height:40px;min-height:40px;border:0;border-bottom:1px solid var(--border);border-radius:0;box-shadow:none}
 .workbench-layout .work-surface{padding-left:0}
 .workbench-layout .shelf-notches{top:0;bottom:0;left:0;width:42px;max-height:none;gap:2px;padding:4px 0;align-items:stretch;border-right:1px solid var(--border);background:var(--chrome-plane,var(--panel));overflow-x:hidden}
@@ -18,8 +17,8 @@
 .workbench-layout .project-heading h1{font-size:23px}
 .workbench-layout .project-heading .eyebrow{display:none}
 .workbench-layout .project-heading p{margin-top:4px}
-.workbench-layout .workspace-shell[data-view=project]:has(.chat-panel){padding-right:var(--agent-panel-width)}
-.workbench-layout .chat-panel{top:8px;bottom:8px;right:8px;border-radius:0 9px 9px 0;border-right:0;border-top:0;border-bottom:0;box-shadow:none}
+.workbench-layout .workspace-shell[data-view=project]:has(.chat-panel){padding-right:0;margin-right:calc(var(--agent-panel-width) + 8px)}
+.workbench-layout .chat-panel{top:8px;bottom:8px;right:8px;border-radius:12px;border:1px solid var(--border);box-shadow:0 3px 14px rgba(0,0,0,.22)}
 .workbench-layout .apps-shelf>.app-home{flex:1;min-height:0;overflow:auto;padding:24px}
 @media(max-width:900px){.app-shell.workbench-layout{padding:4px}.workbench-layout .chat-panel{top:4px;right:4px;bottom:4px}}
 

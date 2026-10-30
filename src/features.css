@@ -309,6 +309,8 @@ kbd{font-family:inherit}
 .canvas-view.freeform .board-card h3{font-size:15px;font-weight:600;letter-spacing:-.01em;margin-top:10px;color:#1c1f26;line-height:1.35}
 .canvas-view.freeform .board-card p{font-size:12px;color:#5d6572;line-height:1.55;margin-top:6px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .canvas-view.freeform .board-card-bottom{display:flex;justify-content:space-between;font-size:10px;color:#8b93a0;margin-top:12px;padding-top:8px;border-top:1px solid #eceef2}
+.embed-doc-edit{position:relative;cursor:text}.embed-doc-edit .doc-blocks{padding:4px 6px 36px;max-width:none;overflow:visible}.embed-doc-edit :is(.doc-gutter,.doc-comment,.doc-undo,.doc-add-row){display:none}.embed-doc-edit .doc-text{font-size:13px}
+.embed-done{position:sticky;top:0;z-index:5;float:right;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:7px;font-size:11px;color:var(--muted);background:var(--card);border:1px solid var(--border)}.embed-done:hover{color:var(--text)}
 .canvas-view.freeform .embed-doc{margin-top:8px;font-size:13px}.canvas-view.freeform .embed-doc h1{font-size:20px;margin:4px 0 8px}.canvas-view.freeform .embed-doc p{font-size:13px;line-height:1.55;margin:6px 0}.canvas-view.freeform .embed-doc ul{padding-left:20px;margin:6px 0}
 .canvas-view.freeform .embed-text{border:1px solid #dcdfe6;border-radius:6px;padding:8px;font-size:13px;background:#fff}
 .canvas-view.freeform .embed-sheet{margin-top:10px;border:1px solid #e3e5ea;border-radius:6px}

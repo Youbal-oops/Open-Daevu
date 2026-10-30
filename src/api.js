@@ -49,6 +49,7 @@ const preview = {
   async openURL(url) { if (/^https?:\/\//i.test(url)) window.open(url, '_blank', 'noopener,noreferrer'); },
   async readFile() { throw new Error('Previews need the desktop app.'); },
   async importSheets() { throw new Error('Importing spreadsheets needs the desktop app.'); },
+  async storagePresence() { return {}; },
   async importFiles() { throw new Error('Use the desktop app to import documents into your local workspace.'); },
   async fileData() { throw new Error('Map images need the desktop app.'); },
   async previewHtml() { throw new Error('Previews use the desktop app.'); },
@@ -63,6 +64,21 @@ const preview = {
     if (!note) return;
     const url = URL.createObjectURL(new Blob([note.content], { type: 'text/plain;charset=utf-8' }));
     const a = document.createElement('a'); a.href = url; a.download = `${note.title}.${note.kind === 'sheet' ? 'csv' : 'md'}`; a.click(); URL.revokeObjectURL(url);
+  },
+  // Files an app hands over to save, or asks the person to pick (the desktop app uses native dialogs instead).
+  async appSaveFile(name, data) {
+    const url = URL.createObjectURL(new Blob([data])), a = document.createElement('a');
+    a.href = url; a.download = String(name || 'export').replace(/[<>:"/\\|?*]/g, '-'); a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return true;
+  },
+  appOpenFile(options = {}) {
+    return new Promise(resolve => {
+      const input = document.createElement('input'); input.type = 'file';
+      const accept = (Array.isArray(options.accept) ? options.accept : []).map(x => '.' + String(x).replace(/^[.*]+/, '')).join(','); if (accept) input.accept = accept;
+      input.onchange = async () => { const file = input.files?.[0]; resolve(file ? { name: file.name, type: file.type || 'application/octet-stream', bytes: new Uint8Array(await file.arrayBuffer()) } : null); };
+      input.oncancel = () => resolve(null);
+      input.click();
+    });
   }
 };
 export const desktop = Boolean(window.workspace);

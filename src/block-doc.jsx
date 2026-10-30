@@ -1,4 +1,5 @@
 import React, { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { MessageSquare, Plus, GripVertical, Check, ImagePlus, Undo2, Redo2, Copy, Trash2 } from 'lucide-react';
 import { uid } from './ui';
 import { listNumbers } from '../shared/blocks.mjs';
@@ -119,7 +120,7 @@ const Row = memo(function Row({ b, num, focus, count, menu, pick, over, flow, ap
 });
 
 // A block editor for documents. The caller keeps the blocks; every change hands back the whole new list.
-export function BlockDoc({ charts, blocks, onChange, commentCounts = {}, onComment, images = [], onImages, projectId, onNotice }) {
+export function BlockDoc({ charts, blocks, onChange, commentCounts = {}, onComment, images = [], onImages, projectId, onNotice, undoSlot }) {
   const [focus, setFocus] = useState(null), [menu, setMenu] = useState(null), [pick, setPick] = useState(0), [drag, setDrag] = useState(null);
   const api = useRef({}), latest = useRef(blocks); latest.current = blocks;
   const signature = useMemo(() => blocks.map(b => b.id + b.type + (b.text || '')).join('\u0001'), [blocks]);
@@ -219,8 +220,10 @@ export function BlockDoc({ charts, blocks, onChange, commentCounts = {}, onComme
   };
 
   const numbers = useMemo(() => listNumbers(blocks), [blocks]);
+  // With a slot from the host these sit in its top toolbar; without one they float over the document.
+  const undoButtons = className => <><button type="button" className={className} aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={history.undo}><Undo2 size={15}/></button><button type="button" className={className} aria-label="Redo" title="Redo (Ctrl+Y)" disabled={!history.canRedo} onClick={history.redo}><Redo2 size={15}/></button></>;
   return <div {...board.rootProps} onKeyDown={history.onKeyDown} className="doc-blocks flow-root" role="document" aria-label="Document blocks">
-    <div className="doc-undo"><button type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={history.undo}><Undo2 size={15}/></button><button type="button" aria-label="Redo" title="Redo (Ctrl+Y)" disabled={!history.canRedo} onClick={history.redo}><Redo2 size={15}/></button></div>
+    {undoSlot ? createPortal(<>{undoButtons('icon-button')}</>, undoSlot) : <div className="doc-undo">{undoButtons()}</div>}
     {ctx.element}{charts?.picker}{emojiAt && <EmojiPopup x={emojiAt.x} y={emojiAt.y} onClose={() => setEmojiAt(null)} onPick={i => api.current.insertEmoji(emojiAt, i)}/>}
     {picker.element}
     {onImages && <ImageLayer board={board}/>}

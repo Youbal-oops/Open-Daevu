@@ -33,6 +33,8 @@ export function LiveApp({ artifact, project, className = '', title, draft = fals
         else if(m.op==='db-write')value=await api.appDatabaseWrite(project.id,artifact.id,m.args?.[0]);
         else if(m.op==='db-create')value=await api.appDatabaseCreate(project.id,artifact.id,m.args?.[0],m.args?.[1]);
         else if (m.op === 'ask') { ask(String(m.args?.[0] || '').slice(0, 4000)); value = true; }
+        else if (m.op === 'export') { const data = m.args?.[1]; if (typeof data !== 'string' && !(data instanceof ArrayBuffer) && !ArrayBuffer.isView(data)) throw new Error('rw.export needs text, an ArrayBuffer, a typed array or a Blob.'); value = await api.appSaveFile(String(m.args?.[0] || 'export'), data instanceof ArrayBuffer || typeof data === 'string' ? data : new Uint8Array(data.buffer, data.byteOffset, data.byteLength)); }
+        else if (m.op === 'import') { const file = await api.appOpenFile({ accept: Array.isArray(m.args?.[0]?.accept) ? m.args[0].accept.slice(0, 20).map(String) : [] }); value = file && { name: file.name, type: file.type, size: file.bytes.byteLength, bytes: file.bytes.buffer.slice(file.bytes.byteOffset, file.bytes.byteOffset + file.bytes.byteLength) }; }
         else if (m.op === 'file') value = await api.fileData(project.id, String(m.args?.[0] || ''));
         else value = bridgeRead(project, m.op, m.args || []);
         post({ id: m.id, ok: true, value });

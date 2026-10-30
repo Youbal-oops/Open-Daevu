@@ -310,6 +310,7 @@ app.whenReady().then(async () => {
     return { ok: true };
   });
   handle('storage:shared',async()=>{if(runner.groups.size||sheetPython.busy||scheduler.busy)throw Error('Finish or stop active runs before enabling shared editing.');scheduler.stop();try{return await storage.enableShared(store);}finally{if(!storage.restartNeeded)scheduler.start();}});
+  handle('storage:presence',open=>storage.shared?storage.shared.presence(open):{});
   handle('storage:conflicts',()=>storage.shared?.conflicts() || []);
   handle('storage:conflict',id=>{if(!storage.shared)throw Error('Open a shared Drive workspace.');return storage.shared.conflict(id);});
   handle('storage:resolve',async(id,version)=>{if(!storage.shared)throw Error('Open a shared Drive workspace.');await storage.assertWritable();const state=await store.resolveShared(id,version);storage.emit();return state;});
@@ -505,6 +506,8 @@ app.whenReady().then(async () => {
   appWindows=new AppWindows({BrowserWindow,ipcMain,store,iconFor:artifact=>nativeAppIcon(artifact,nativeImage),database:boardsDb,apps:appProjects,url:trustedURL,preview:previewHtml,ask:async(projectId,text)=>{pendingAppAsk={projectId,text};if(!window || window.isDestroyed())await createWindow();window.show();window.focus();if(appAskReady && pendingAppAsk){send('artifact:ask',pendingAppAsk);pendingAppAsk=null;}}});
   appProjects.openPreview=(projectId,appId)=>appWindows.open(projectId,appId,{draft:true});
   handle('artifact:window',(projectId,artifactId)=>appWindows.open(projectId,artifactId));
+  handle('app:save-file', (name, data) => require('./app-transfer.cjs').saveFile(window, name, data));
+  handle('app:open-file', options => require('./app-transfer.cjs').openFile(window, options));
   handle('artifact:export', async (projectId, artifactId) => {
     const artifact = store.state.projects.find(p => p.id === projectId)?.artifacts?.find(a => a.id === artifactId);
     if (artifact?.kind !== 'html') throw new Error('Choose an interactive page.');
@@ -568,6 +571,6 @@ app.on('before-quit', event => {
   event.preventDefault(); quitting = true;
   globalShortcut.unregisterAll(); clearInterval(storage?.timer); approvals.destroy(); mcp?.destroy(); sheetPython.stop(); scheduler?.stop(); runner?.stopAll(); accounts?.destroy(); browser?.destroy(); pluginWeb?.destroy();tray?.destroy();
   (async () => { if(window&&!window.isDestroyed())try{await Promise.race([window.webContents.executeJavaScript("(()=>{const detail={pending:[]};window.dispatchEvent(new CustomEvent('research:flush-drafts',{detail}));return Promise.all(detail.pending);})()"),new Promise(resolve=>setTimeout(resolve,3000))]);}catch{} const deadline = Date.now() + 5000; while ((runner?.groups.size || scheduler?.busy || sheetPython.busy) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25)); await store?.queue; await webChatDrafts?.queue;await plugins?.queue; })()
-    .catch(error => console.error(error.message)).finally(async () => { try { await storage?.shared?.flushNow?.(); } catch {} try { await deviceLock?.release(); } catch {} storage?.close(); app.quit(); });
+    .catch(error => console.error(error.message)).finally(async () => { try { await storage?.shared?.flushNow?.(); } catch {} try { await storage?.shared?.clearPresence?.(); } catch {} try { await deviceLock?.release(); } catch {} storage?.close(); app.quit(); });
 });
 app.on('window-all-closed', () => { if (!store?.state.settings.keepRunning && process.platform !== 'darwin') app.quit(); });

@@ -56,6 +56,7 @@ function edit(parent,key,before,after){
   }else parent[key]=pack(after);
 }
 async function atomic(file,bytes){await fs.mkdir(path.dirname(file),{recursive:true});const temp=file+'.'+randomUUID()+'.tmp';await fs.writeFile(temp,bytes);try{await replaceFile(temp,file);}catch(e){await fs.unlink(temp).catch(()=>{});throw e;}}
+const PRESENCE_BEAT=30000,PRESENCE_TTL=3*60*1000;
 class DriveSync {
   constructor(root,userData,marker,{deviceId,validate=()=>{}}={}){
     Object.assign(this,{root,userData,marker,deviceId,validate});this.directory=path.join(root,'.research-sync');this.cache=path.join(userData,'shared-cache',marker.id);this.outbox=path.join(this.cache,'outbox');this.seen=new Set();this.actor=randomUUID().replaceAll('-','');this.pending=0;this.error='';this.localHashes=new Set();this.needsScan=true;this.snapshotAt=0;this.snapshotDirty=false;
@@ -157,6 +158,31 @@ class DriveSync {
     for(const [name,data] of folded){await fs.writeFile(path.join(archive,name),data);await fs.unlink(path.join(changes,name)).catch(()=>{});}
     try{await fs.copyFile(path.join(this.directory,previous),path.join(archive,previous));await fs.unlink(path.join(this.directory,previous));}catch{}
     return {compacted:true,folded:folded.length,kept:names.length-folded.length,bytes:bytes.length,epoch};
+  }
+  // Advisory presence. Each PC writes only its own small file in .research-sync/presence, so there is nothing to merge, and reads the
+  // others'. Drive delivers late and PC clocks differ, so this only warns that a document is open elsewhere; it never blocks an edit.
+  async presence(open){
+    const folder=path.join(this.directory,'presence'),safe=id=>typeof id==='string'&&id.length>0&&id.length<=80&&[...id].every(c=>/[a-zA-Z0-9-]/.test(c));
+    const ids=[...new Set((Array.isArray(open)?open:[]).filter(safe))].sort().slice(0,50),key=ids.join(','),mine=safe(this.deviceId)?this.deviceId:hash(String(this.deviceId));
+    if(key!==this.presenceKey||Date.now()-(this.presenceAt||0)>PRESENCE_BEAT){
+      try{await atomic(path.join(folder,mine+'.json'),Buffer.from(JSON.stringify({deviceId:mine,name:os.hostname().slice(0,60),at:new Date().toISOString(),open:ids})));this.presenceKey=key;this.presenceAt=Date.now();}catch{}
+    }
+    const others={};let names=[];try{names=await fs.readdir(folder);}catch{return others;}
+    for(const name of names){
+      if(!name.endsWith('.json')||name===mine+'.json')continue;
+      try{
+        const file=path.join(folder,name);if((await fs.stat(file)).size>20000)continue;
+        const value=JSON.parse(await fs.readFile(file,'utf8')),seen=Date.parse(value.at);
+        if(!Number.isFinite(seen)||Math.abs(Date.now()-seen)>PRESENCE_TTL||!Array.isArray(value.open))continue;
+        for(const id of value.open)if(ids.includes(id)&&(!others[id]||seen>Date.parse(others[id].at)))others[id]={device:String(value.name||'another PC').slice(0,60),at:value.at};
+      }catch{}
+    }
+    return others;
+  }
+  async clearPresence(){
+    this.presenceKey=undefined;
+    const mine=[...String(this.deviceId)].every(c=>/[a-zA-Z0-9-]/.test(c))?this.deviceId:hash(String(this.deviceId));
+    await fs.unlink(path.join(this.directory,'presence',mine+'.json')).catch(()=>{});
   }
   async flush(){
     const names=(await fs.readdir(this.outbox)).filter(n=>/^[a-f0-9]{64}\.change$/.test(n));this.pending=names.length;

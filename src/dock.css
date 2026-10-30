@@ -1,21 +1,15 @@
 /* movable side columns */
 .app-shell:not(.sidebar-collapsed)>.sidebar{width:var(--sidebar-w,238px)!important;min-width:var(--sidebar-w,238px)!important;position:relative}
 .app-shell[data-sidebar-side=right]{flex-direction:row-reverse}
-.workbench-layout[data-sidebar-side=right]>.sidebar{border-radius:0 9px 9px 0;border-left:0;border-right:1px solid var(--glass-edge,var(--border))}
-.workbench-layout[data-sidebar-side=right]>.workspace-shell{border-radius:9px 0 0 9px}
-.workbench-layout.sidebar-collapsed[data-sidebar-side=right]>.workspace-shell{border-radius:9px}
 .app-shell[data-sidebar-side=right].sidebar-collapsed>.sidebar{transform:translateX(10px)}
 
 /* chat position */
-.workbench-layout{--dock-left:9px;--dock-right:9px}
-.workbench-layout[data-sidebar-side=left]:not(.sidebar-collapsed){--dock-left:calc(9px + var(--sidebar-w,238px))}
-.workbench-layout[data-sidebar-side=right]:not(.sidebar-collapsed){--dock-right:calc(9px + var(--sidebar-w,238px))}
-.workbench-layout .project-layout .chat-panel{position:fixed;top:calc(var(--titlebar-h) + 1px);bottom:9px;height:auto;right:var(--dock-right);left:auto;width:var(--agent-panel-width);min-width:0;max-width:none;border-radius:0;border:0;border-left:1px solid var(--glass-edge,var(--border));z-index:3}
-.workbench-layout[data-chat-side=left] .project-layout .chat-panel{left:var(--dock-left);right:auto;border-left:0;border-right:1px solid var(--glass-edge,var(--border))}
-.workbench-layout[data-chat-side=left] .workspace-shell[data-view=project]:has(.chat-panel){padding-right:0;padding-left:var(--agent-panel-width)}
-.workbench-layout[data-chat-side=left] .workspace-shell:has(.chat-panel) .shelf-notches{left:var(--agent-panel-width)}
-.workbench-layout[data-chat-side=right][data-sidebar-side=left] .project-layout .chat-panel{border-radius:0 8px 8px 0}
-.workbench-layout[data-chat-side=left][data-sidebar-side=right] .project-layout .chat-panel{border-radius:8px 0 0 8px}
+.workbench-layout{--dock-left:8px;--dock-right:8px}
+.workbench-layout[data-sidebar-side=left]:not(.sidebar-collapsed){--dock-left:calc(16px + var(--sidebar-w,238px))}
+.workbench-layout[data-sidebar-side=right]:not(.sidebar-collapsed){--dock-right:calc(16px + var(--sidebar-w,238px))}
+.workbench-layout .project-layout .chat-panel{position:fixed;top:calc(var(--titlebar-h) + 8px);bottom:8px;height:auto;right:var(--dock-right);left:auto;width:var(--agent-panel-width);min-width:0;max-width:none;border-radius:12px;border:1px solid var(--border);box-shadow:0 3px 14px rgba(0,0,0,.22);z-index:3}
+.workbench-layout[data-chat-side=left] .project-layout .chat-panel{left:var(--dock-left);right:auto}
+.workbench-layout[data-chat-side=left] .workspace-shell[data-view=project]:has(.chat-panel){margin-right:0;margin-left:calc(var(--agent-panel-width) + 8px)}
 
 /* resize edges */
 .resize-edge{position:absolute;top:0;bottom:0;width:9px;z-index:8;cursor:col-resize;touch-action:none;outline:0}
@@ -64,7 +58,6 @@ body.dock-dragging{cursor:grabbing;user-select:none}
 .sidebar .section-label.project-label{margin-top:2px}
 
 /* shelf handles hide behind a left chat */
-.workbench-layout[data-chat-side=left] .workspace-shell:has(.chat-panel) .shelf-notches{clip-path:inset(-200px -200px -200px 0)}
 
 /* rings centred on the icon */
 .workbench-layout .shelf-notches .canvas-shelf-handle:hover,.workbench-layout .shelf-notches .canvas-shelf-handle:focus-visible{background:radial-gradient(circle at 33px 25px,var(--hover) 21px,transparent 21.5px)}

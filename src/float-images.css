@@ -42,4 +42,7 @@ body.picture-dragging *{transition:none!important}
 .canvas-notice{position:absolute;left:50%;top:14px;translate:-50% 0;z-index:40;max-width:70%;padding:8px 14px;border-radius:10px;background:var(--card);border:1px solid var(--border);box-shadow:0 10px 30px #0005;color:var(--text);font-size:12px}
 .doc-undo{position:sticky;top:0;z-index:6;display:flex;gap:2px;width:max-content;margin:0 0 -34px auto;padding:3px;border-radius:10px;background:var(--glass-floating,var(--card));border:1px solid var(--border);box-shadow:0 6px 20px #0004;backdrop-filter:blur(12px)}
 .doc-undo button{width:28px;height:26px;display:grid;place-items:center;border-radius:7px;color:var(--muted)}.doc-undo button:hover:not(:disabled){background:var(--hover);color:var(--text)}.doc-undo button:disabled{opacity:.35}
+.presence-note{margin:6px 16px 0;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--accent-wash,var(--card));color:var(--muted);font-size:12px}
+.toolbar-undo{display:inline-flex;gap:2px}.toolbar-undo .icon-button:disabled{opacity:.35;pointer-events:none}
+.page-props .prop-add:disabled{opacity:.4;pointer-events:none}
 .prop-undo{display:inline-flex;gap:2px}.prop-undo .prop-add:disabled{opacity:.35;pointer-events:none}

@@ -39,6 +39,8 @@ class AppWindows {
     if(op==='db-query')return this.database.query(record.projectId,value.sql,value.params);
     if(op==='db-write')return this.database.write(record.projectId,value,{appId:record.artifactId});
     if(op==='db-create')return this.database.create(record.projectId,value.name,value.properties,{appId:record.artifactId});
+    if(op==='export')return require('./app-transfer.cjs').saveFile(record.window,value?.name,value?.data);
+    if(op==='import')return require('./app-transfer.cjs').openFile(record.window,value);
     if(op==='file'){
       const file=project.files.find(f=>f.id===value),types={'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif'};
       if(!file || path.basename(file.storedName)!==file.storedName || !types[path.extname(file.storedName).toLowerCase()])throw Error('Choose a project image.');

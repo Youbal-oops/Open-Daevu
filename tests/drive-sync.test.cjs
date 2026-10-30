@@ -150,3 +150,18 @@ test('compacted baselines are recognised, and a malformed marker is refused',asy
  await fs.writeFile(file,JSON.stringify({...original,version:2,epoch:1,base:'base-elsewhere.automerge'}));await assert.rejects(DriveSync.marker(roots[0]),/Unsupported shared editing format/);
  await fs.writeFile(file,JSON.stringify({...original,version:3}));await assert.rejects(DriveSync.marker(roots[0]),/Unsupported shared editing format/);
 });
+test('presence tells a PC when another one has the same document open, and expires',async t=>{
+ const {roots,marker,folder}=await setup(t);
+ const a=new DriveSync(roots[0],path.join(folder,'p-0'),marker,{deviceId:'device-a1'}),b=new DriveSync(roots[1],path.join(folder,'p-1'),marker,{deviceId:'device-b1'});
+ // The folders are separate replicas here, so copy A's presence file across the way Drive would.
+ const deliver=async(from,to)=>{const source=path.join(from.directory,'presence'),target=path.join(to.directory,'presence');await fs.mkdir(target,{recursive:true});for(const name of await fs.readdir(source))await fs.copyFile(path.join(source,name),path.join(target,name));};
+ await a.presence(['note-1','note-2']);await deliver(a,b);
+ assert.deepEqual(Object.keys(await b.presence(['note-1','note-3'])),['note-1']);
+ assert.equal((await b.presence(['note-3']))['note-1'],undefined);
+ assert.equal((await a.presence(['note-1']))['note-1'],undefined);
+ const file=path.join(b.directory,'presence','device-a1.json'),old=JSON.parse(await fs.readFile(file,'utf8'));
+ await fs.writeFile(file,JSON.stringify({...old,at:new Date(Date.now()-10*60*1000).toISOString()}));
+ assert.deepEqual(await b.presence(['note-1']),{});
+ await fs.writeFile(file,'not json');assert.deepEqual(await b.presence(['note-1']),{});
+ await a.clearPresence();await assert.rejects(fs.access(path.join(a.directory,'presence','device-a1.json')));
+});
